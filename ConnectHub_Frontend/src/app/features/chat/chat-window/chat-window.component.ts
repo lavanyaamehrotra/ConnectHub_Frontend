@@ -71,7 +71,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   displayRoomInfo: boolean = false;
   roomMembers: any[] = [];
   
-  // New Room Management Variables
   isEditingRoom: boolean = false;
   editRoomForm: any = {
     roomName: '',
@@ -85,9 +84,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     { label: 'Member', value: 'MEMBER' }
   ];
   
-  // NEW: Tracking online user IDs globally to avoid races with sidebar loads
   private onlineUserIds: Set<string> = new Set<string>();
-
   private subs = new Subscription();
 
   constructor(
@@ -106,10 +103,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file && (this.selectedUser || this.selectedRoom)) {
-      console.log('Uploading file:', file.name);
       this.mediaService.upload(file).subscribe({
         next: (res: any) => {
-          console.log('Upload success:', res);
           const messageType = file.type.startsWith('image/') ? 'IMAGE' : 'FILE';
           const rawUrl = res.blobUrl || res.fileUrl;
           const mediaUrl = this.transformUrl(rawUrl);
@@ -127,25 +122,13 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   transformUrl(url: string): string {
     if (!url) return '';
-    
-    console.log('Original Media URL:', url);
-    
     let fixedUrl = url;
-    // Aggressively replace docker/internal hostnames with localhost
-    // Using /gi for case-insensitive global replacement
     fixedUrl = fixedUrl.replace(/azurite:10000/gi, 'localhost:10000');
     fixedUrl = fixedUrl.replace(/127\.0\.0\.1:10000/gi, 'localhost:10000');
     fixedUrl = fixedUrl.replace(/host\.docker\.internal:10000/gi, 'localhost:10000');
-    
-    // Ensure the default Azurite account name is present if it's a local blob URL
     if (fixedUrl.includes('localhost:10000') && !fixedUrl.includes('devstoreaccount1')) {
       fixedUrl = fixedUrl.replace('localhost:10000/', 'localhost:10000/devstoreaccount1/');
     }
-    
-    if (fixedUrl !== url) {
-      console.log('Transformed Media URL:', fixedUrl);
-    }
-    
     return fixedUrl;
   }
 
@@ -157,16 +140,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.loadRecentChats();
     this.loadMyRooms();
 
-    // Once SignalR connects, re-fetch online status from Redis
-    // (fixes race: users load before SignalR registers presence)
     this.subs.add(
       this.signalrService.connected$.subscribe(() => {
-        // Small delay to let OnConnectedAsync finish writing to Redis
         setTimeout(() => this.refreshOnlineStatus(), 800);
       })
     );
 
-    // Check for roomId in query params
     this.subs.add(
       this.route.queryParams.subscribe(params => {
         const roomId = params['roomId'];
@@ -176,37 +155,30 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Listen for messages received from OTHERS
     this.subs.add(
       this.signalrService.messageReceived$.subscribe(msg => {
         if (!msg) return;
+        const senderId = (msg.senderId || msg.SenderId)?.toString().toLowerCase();
+        const receiverId = (msg.receiverId || msg.ReceiverId)?.toString().toLowerCase();
+        const currentUserId = this.currentUser.id?.toString().toLowerCase();
+        const selectedId = this.selectedUser?.id?.toString().toLowerCase();
         
-        const senderId = msg.senderId?.toLowerCase();
-        const receiverId = msg.receiverId?.toLowerCase();
-        const selectedId = this.selectedUser?.id?.toLowerCase();
-        
-        // 1. Update current chat window if it matches
         if (this.selectedUser && (senderId === selectedId || receiverId === selectedId)) {
-          msg.mediaUrl = this.transformUrl(msg.mediaUrl);
+          msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
           this.messages.push(msg);
           this.scrollToBottom();
 
-          // If we received this message from someone else while looking at their chat,
-          // mark it as read immediately.
           if (senderId === selectedId) {
-            this.signalrService.markMessageAsRead(msg.messageId, msg.senderId);
+            this.signalrService.markMessageAsRead(msg.messageId || msg.MessageId, msg.senderId || msg.SenderId);
           }
         }
 
-        // 2. Update/Add sidebar entry
-        const partnerId = senderId === this.currentUser?.id?.toLowerCase() ? receiverId : senderId;
-        let sidebarUser = this.users.find(u => u.id?.toLowerCase() === partnerId);
+        const partnerId = senderId === currentUserId ? receiverId : senderId;
+        let sidebarUser = this.users.find(u => u.id?.toString().toLowerCase() === partnerId);
         
         if (sidebarUser) {
-          console.log('Sidebar: Updating existing user', sidebarUser.id);
-          sidebarUser.lastMessage = msg.content || '📷 Media';
-          sidebarUser.lastMessageTime = msg.sentAt;
-          // Increment unread count if not current selection
+          sidebarUser.lastMessage = msg.content || msg.Content || '📷 Media';
+          sidebarUser.lastMessageTime = msg.sentAt || msg.SentAt;
           if (partnerId !== selectedId) {
             sidebarUser.unreadCount = (sidebarUser.unreadCount || 0) + 1;
           } else {
@@ -214,12 +186,11 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
           }
           this.sortUsersByTime();
         } else {
-          // Create new sidebar entry if not found
           const newUser = {
             id: partnerId,
-            displayName: msg.senderDisplayName || 'New Chat',
-            lastMessage: msg.content || '📷 Media',
-            lastMessageTime: msg.sentAt,
+            displayName: msg.senderDisplayName || msg.SenderDisplayName || 'New Chat',
+            lastMessage: msg.content || msg.Content || '📷 Media',
+            lastMessageTime: msg.sentAt || msg.SentAt,
             unreadCount: (partnerId !== selectedId) ? 1 : 0,
             isOnline: false
           };
@@ -230,69 +201,65 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Listen for confirmation that OUR message was sent
     this.subs.add(
       this.signalrService.messageSent$.subscribe(msg => {
         if (msg && this.selectedUser) {
-          const receiverId = msg.receiverId?.toLowerCase();
-          const selectedId = this.selectedUser.id?.toLowerCase();
+          const receiverId = (msg.receiverId || msg.ReceiverId)?.toString().toLowerCase();
+          const selectedId = this.selectedUser.id?.toString().toLowerCase();
           
           if (receiverId === selectedId) {
-            msg.mediaUrl = this.transformUrl(msg.mediaUrl);
+            msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
             this.messages.push(msg);
             this.scrollToBottom();
           }
-          // Update sidebar preview
-          const sidebarUser = this.users.find(u => u.id?.toLowerCase() === selectedId);
+          const sidebarUser = this.users.find(u => u.id?.toString().toLowerCase() === selectedId);
           if (sidebarUser) {
-            sidebarUser.lastMessage = msg.content || '📷 Media';
-            sidebarUser.lastMessageTime = msg.sentAt;
+            sidebarUser.lastMessage = msg.content || msg.Content || '📷 Media';
+            sidebarUser.lastMessageTime = msg.sentAt || msg.SentAt;
           }
         }
       })
     );
 
-    // Listen for messages sent by ME
-    this.subs.add(
-      this.signalrService.messageSent$.subscribe(msg => {
-        if (!msg) return;
-        const partnerId = msg.receiverId?.toLowerCase();
-        let sidebarUser = this.users.find(u => u.id?.toLowerCase() === partnerId);
-        if (sidebarUser) {
-          sidebarUser.lastMessage = msg.content || '📷 Media';
-          sidebarUser.lastMessageTime = msg.sentAt;
-          this.sortUsersByTime();
-        }
-      })
-    );
-
-    // Listen for room messages
     this.subs.add(
       this.signalrService.roomMessageReceived$.subscribe(msg => {
-        // Rooms use string IDs or GUIDs but typically case issues are GUIDs. Let's make it robust
-        if (msg && this.selectedRoom && msg.roomId?.toString().toLowerCase() === this.selectedRoom.roomId?.toString().toLowerCase()) {
-          msg.mediaUrl = this.transformUrl(msg.mediaUrl);
-          this.messages.push(msg);
-          this.scrollToBottom();
+        if (!msg) return;
+        console.log('SignalR: ReceiveRoomMessage', msg);
+        const roomId = (msg.roomId || msg.RoomId)?.toString().toLowerCase();
+        const currentRoomId = this.selectedRoom?.roomId?.toString().toLowerCase();
+        const messageId = msg.messageId || msg.MessageId;
+
+        if (roomId && currentRoomId && roomId === currentRoomId) {
+          if (!this.messages.find(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === messageId?.toString().toLowerCase())) {
+            msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
+            this.messages.push(msg);
+            this.scrollToBottom();
+          }
+
+          const senderId = (msg.senderId || msg.SenderId)?.toString().toLowerCase();
+          const currentUserId = this.currentUser.id?.toString().toLowerCase();
+          if (senderId !== currentUserId) {
+            console.log('Marking room message as read:', messageId);
+            this.signalrService.markRoomMessageAsRead(roomId, messageId);
+          }
         }
       })
     );
 
     this.subs.add(
       this.signalrService.roomMessageEdited$.subscribe(updatedMsg => {
-        console.log('Room Message Edited Event:', updatedMsg);
         if (updatedMsg && this.selectedRoom) {
           const incomingRoomId = (updatedMsg.roomId || updatedMsg.RoomId)?.toString().toLowerCase();
           const currentRoomId = this.selectedRoom.roomId?.toString().toLowerCase();
           
           if (incomingRoomId === currentRoomId) {
             const targetId = (updatedMsg.messageId || updatedMsg.MessageId)?.toString().toLowerCase();
-            const index = this.messages.findIndex(m => m.messageId?.toString().toLowerCase() === targetId);
+            const index = this.messages.findIndex(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
             
             if (index !== -1) {
               this.messages[index].content = updatedMsg.content || updatedMsg.Content;
               this.messages[index].isEdited = true;
-              this.messages = [...this.messages]; // Force change detection
+              this.messages = [...this.messages];
             }
           }
         }
@@ -301,21 +268,20 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
     this.subs.add(
       this.signalrService.roomMessageDeleted$.subscribe(messageId => {
-        console.log('Room Message Deleted Event:', messageId);
         const targetId = messageId?.toString().toLowerCase();
-        const index = this.messages.findIndex(m => m.messageId?.toString().toLowerCase() === targetId);
+        const index = this.messages.findIndex(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
         if (index !== -1) {
           this.messages[index].isDeleted = true;
           this.messages[index].content = 'This message was deleted';
           this.messages[index].mediaUrl = null;
-          this.messages = [...this.messages]; // Force change detection
+          this.messages = [...this.messages];
         }
       })
     );
 
     this.subs.add(
       this.signalrService.typingIndicator$.subscribe(data => {
-        if (data && this.selectedUser && data.senderId === this.selectedUser.id) {
+        if (data && this.selectedUser && data.senderId?.toString().toLowerCase() === this.selectedUser.id?.toString().toLowerCase()) {
           this.typingUser = data.isTyping ? this.selectedUser.displayName : null;
           if (data.isTyping) {
             setTimeout(() => this.typingUser = null, 5000);
@@ -327,56 +293,59 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.signalrService.messageEdited$.subscribe(msg => {
         if (!msg) return;
-        const index = this.messages.findIndex(m => m.messageId === msg.messageId);
+        const targetId = (msg.messageId || msg.MessageId)?.toString().toLowerCase();
+        const index = this.messages.findIndex(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
         if (index !== -1) {
-          this.messages[index] = { ...this.messages[index], ...msg, mediaUrl: this.transformUrl(msg.mediaUrl) };
+          this.messages[index] = { ...this.messages[index], ...msg, mediaUrl: this.transformUrl(msg.mediaUrl || msg.MediaUrl) };
+          this.messages = [...this.messages];
         }
       })
     );
 
     this.subs.add(
       this.signalrService.messageDeleted$.subscribe(messageId => {
-        const msg = this.messages.find(m => m.messageId === messageId);
+        const targetId = messageId?.toString().toLowerCase();
+        const msg = this.messages.find(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
         if (msg) {
           msg.isDeleted = true;
           msg.content = 'This message was deleted';
           msg.mediaUrl = null;
+          this.messages = [...this.messages];
         }
       })
     );
 
     this.subs.add(
       this.signalrService.messageRead$.subscribe(data => {
-        console.log('SignalR: MessageRead received', data);
         if (!data) return;
-        const targetId = (data.messageId || data.MessageId)?.toLowerCase();
+        const targetId = (data.messageId || data.MessageId)?.toString().toLowerCase();
         const readTime = data.readAt || data.ReadAt;
         if (!targetId) return;
         
-        const msg = this.messages.find(m => m.messageId?.toLowerCase() === targetId);
+        const msg = this.messages.find(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
         if (msg) {
           msg.isRead = true;
           msg.readAt = readTime;
-          console.log('Updated message status to read:', targetId);
+          this.messages = [...this.messages];
         }
       })
     );
 
     this.subs.add(
       this.signalrService.allMessagesRead$.subscribe(data => {
-        console.log('SignalR: AllMessagesRead received', data);
         if (!data || !this.selectedUser) return;
         const readerId = (data.readBy || data.ReadBy)?.toString().toLowerCase();
-        const selectedId = this.selectedUser.id?.toLowerCase();
+        const selectedId = this.selectedUser.id?.toString().toLowerCase();
+        const currentUserId = this.currentUser.id?.toString().toLowerCase();
         
         if (readerId === selectedId) {
           this.messages.forEach(m => {
-            if (m.senderId?.toLowerCase() === this.currentUser.id?.toLowerCase() && !m.isRead) {
+            if (m.senderId?.toString().toLowerCase() === currentUserId && !m.isRead) {
               m.isRead = true;
               m.readAt = data.readAt || data.ReadAt;
             }
           });
-          console.log('Updated all messages in current chat to read');
+          this.messages = [...this.messages];
         }
       })
     );
@@ -399,6 +368,34 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       })
     );
 
+    this.subs.add(
+      this.signalrService.roomMessageRead$.subscribe(data => {
+        console.log('SignalR: RoomMessageRead received', data);
+        if (!data) return;
+        const targetId = (data.messageId || data.MessageId)?.toString().toLowerCase();
+        const readTime = data.readAt || data.ReadAt;
+        if (!targetId) return;
+        
+        const targetMsg = this.messages.find(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === targetId);
+        if (targetMsg) {
+          const targetSentAt = new Date(targetMsg.sentAt || targetMsg.SentAt).getTime();
+          const currentUserId = this.currentUser.id?.toString().toLowerCase();
+          
+          this.messages.forEach(m => {
+            const mId = (m.messageId || m.MessageId)?.toString().toLowerCase();
+            const mSentAt = new Date(m.sentAt || m.SentAt).getTime();
+            const mSenderId = (m.senderId || m.SenderId)?.toString().toLowerCase();
+            
+            if (mSentAt <= targetSentAt && mSenderId === currentUserId) {
+              m.isRead = true;
+              m.readAt = m.readAt || readTime;
+            }
+          });
+          this.messages = [...this.messages];
+        }
+      })
+    );
+
     this.deleteMenuItems = [
       {
         label: 'Delete for me',
@@ -414,9 +411,36 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     ];
   }
 
+  // --- UI Helpers ---
+  scrollToBottom(): void {
+    try {
+      setTimeout(() => {
+        this.myScrollContainer.nativeElement.scrollTop = this.myScrollContainer.nativeElement.scrollHeight;
+      }, 100);
+    } catch(err) { }
+  }
+
+  onTyping(): void {
+    if (this.selectedUser) {
+      this.signalrService.sendTypingIndicator(this.selectedUser.id, true);
+    } else if (this.selectedRoom) {
+      // Need Room Typing implementation in SignalR
+    }
+  }
+
+  sendMessage(): void {
+    if (!this.newMessage.trim()) return;
+    if (this.selectedRoom) {
+      this.signalrService.sendRoomMessage(this.selectedRoom.roomId, this.newMessage);
+    } else if (this.selectedUser) {
+      this.signalrService.sendMessage(this.selectedUser.id, this.newMessage);
+    }
+    this.newMessage = '';
+  }
+
   startEdit(msg: any): void {
-    this.editingMessageId = msg.messageId;
-    this.editContent = msg.content;
+    this.editingMessageId = msg.messageId || msg.MessageId;
+    this.editContent = msg.content || msg.Content;
   }
 
   cancelEdit(): void {
@@ -426,27 +450,25 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   saveEdit(): void {
     if (!this.editingMessageId || !this.editContent.trim()) return;
-    
     if (this.selectedRoom) {
       this.signalrService.editRoomMessage(this.editingMessageId, this.editContent);
     } else {
       this.signalrService.editMessage(this.editingMessageId, this.editContent);
     }
-    
     this.cancelEdit();
   }
 
   deleteMessage(msg: any, forEveryone: boolean): void {
     if (!msg) return;
+    const mId = msg.messageId || msg.MessageId;
     if (forEveryone) {
       if (this.selectedRoom) {
-        this.signalrService.deleteRoomMessage(msg.messageId);
+        this.signalrService.deleteRoomMessage(mId);
       } else {
-        this.signalrService.deleteMessage(msg.messageId);
+        this.signalrService.deleteMessage(mId);
       }
     } else {
-      // Just hide it locally for the current user
-      this.messages = this.messages.filter(m => m.messageId !== msg.messageId);
+      this.messages = this.messages.filter(m => (m.messageId || m.MessageId) !== mId);
     }
   }
 
@@ -464,19 +486,9 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
         isOnline: false,
         unreadCount: c.unreadCount || 0
       }));
-
       this.enrichUnknownUsers();
       this.applyOnlineStatus();
       this.sortUsersByTime();
-
-      // Restore previously selected user if any
-      const lastUserId = localStorage.getItem('lastSelectedUserId')?.toLowerCase();
-      if (lastUserId && !this.selectedUser && !this.selectedRoom) {
-        const found = this.users.find(u => u.id?.toLowerCase() === lastUserId);
-        if (found) {
-          this.selectUser(found);
-        }
-      }
     });
   }
 
@@ -484,23 +496,17 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     const unknownUserIds = this.users
       .filter(u => u.displayName === 'Unknown User' && u.id)
       .map(u => u.id);
-      
     if (unknownUserIds.length > 0) {
       this.userService.getUsersByIds(unknownUserIds).subscribe({
         next: (usersInfo: any[]) => {
           usersInfo.forEach(ui => {
-            const user = this.users.find(u => u.id?.toLowerCase() === ui.userId?.toLowerCase());
+            const user = this.users.find(u => u.id?.toString().toLowerCase() === ui.userId?.toString().toLowerCase());
             if (user) {
               user.displayName = ui.displayName || ui.username || 'Unknown User';
               user.avatarUrl = ui.avatarUrl;
             }
-            if (this.selectedUser && this.selectedUser.id?.toLowerCase() === ui.userId?.toLowerCase()) {
-              this.selectedUser.displayName = ui.displayName || ui.username || 'Unknown User';
-              this.selectedUser.avatarUrl = ui.avatarUrl;
-            }
           });
-        },
-        error: () => {}
+        }
       });
     }
   }
@@ -513,11 +519,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   applyOnlineStatus(): void {
     this.users.forEach(u => {
-      const isOnline = this.onlineUserIds.has(u.id?.toLowerCase());
-      u.isOnline = isOnline;
-      if (this.selectedUser && this.selectedUser.id?.toLowerCase() === u.id?.toLowerCase()) {
-        this.selectedUser.isOnline = isOnline;
-      }
+      u.isOnline = this.onlineUserIds.has(u.id?.toString().toLowerCase());
     });
   }
 
@@ -534,8 +536,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       next: (onlineIds: string[]) => {
         this.onlineUserIds = new Set(onlineIds.map(id => id.toLowerCase()));
         this.applyOnlineStatus();
-      },
-      error: () => {}
+      }
     });
   }
 
@@ -545,38 +546,26 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       return;
     }
     this.userService.searchUsers(this.searchQuery).subscribe((res: any) => {
-      if (res && res.users) {
-        // Show search results but DON'T replace sidebar users permanently yet
-        // isOnline=false by default — real-time presence will update it
-        const searchResults = res.users
-          .filter((u: any) => u.userId !== this.currentUser.userId)
-          .map((u: any) => ({
-            id: u.userId,
-            displayName: u.displayName,
-            username: u.username,
-            isOnline: false, // Will be updated via SignalR presence events
-            lastMessage: 'Start a conversation'
-          }));
-        this.users = searchResults;
-      }
+      const usersList = Array.isArray(res) ? res : (res?.users || []);
+      this.users = usersList.filter((u: any) => u.userId !== this.currentUser.id).map((u: any) => ({
+        id: u.userId,
+        displayName: u.displayName || u.username,
+        isOnline: false,
+        lastMessage: 'Start a conversation'
+      }));
     });
   }
 
   searchMessages(): void {
-    if (!this.messageSearchQuery.trim() || !this.selectedUser) {
-      this.loadConversation();
-      return;
-    }
+    if (!this.messageSearchQuery.trim() || !this.selectedUser) return;
     this.messageService.searchMessages(this.messageSearchQuery).subscribe((res: any) => {
-      if (res && res.messages) {
-        // Filter messages to only show those for the current conversation
-        this.messages = res.messages.filter((m: any) => 
-          m.senderId === this.selectedUser.id || m.receiverId === this.selectedUser.id
-        ).map((m: any) => ({
-          ...m,
-          mediaUrl: this.transformUrl(m.mediaUrl)
-        }));
-      }
+      const msgs = Array.isArray(res) ? res : (res?.messages || []);
+      this.messages = msgs.filter((m: any) => 
+        (m.senderId === this.selectedUser.id || m.receiverId === this.selectedUser.id)
+      ).map((m: any) => ({
+        ...m,
+        mediaUrl: this.transformUrl(m.mediaUrl || m.MediaUrl)
+      }));
     });
   }
 
@@ -584,7 +573,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.isSearchingMessages = !this.isSearchingMessages;
     if (!this.isSearchingMessages) {
       this.messageSearchQuery = '';
-      this.loadConversation();
+      if (this.selectedUser) this.loadConversation();
+      else if (this.selectedRoom) this.loadRoomConversation();
     }
   }
 
@@ -599,8 +589,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.selectedRoom = room;
     this.messages = [];
     this.roomMembers = [];
-    this.isAdmin = false; // Reset admin status until checked
-    this.isEditingRoom = false; // Close edit mode when switching
+    this.isAdmin = false;
+    this.isEditingRoom = false;
     this.signalrService.joinRoom(room.roomId);
     this.loadRoomConversation();
     this.loadRoomMembers(room.roomId);
@@ -609,8 +599,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   loadRoomMembers(roomId: string): void {
     this.roomService.getMembers(roomId).subscribe(members => {
       this.roomMembers = members;
-      this.enrichRoomMembers();
       this.checkIfAdmin();
+      this.enrichRoomMembers();
     });
   }
 
@@ -620,69 +610,43 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       this.userService.getUsersByIds(userIds).subscribe({
         next: (usersInfo: any[]) => {
           usersInfo.forEach(ui => {
-            const member = this.roomMembers.find(m => m.userId?.toLowerCase() === ui.userId?.toLowerCase());
-            if (member) {
-              member.displayName = ui.displayName || ui.username;
-            }
+            const member = this.roomMembers.find(m => m.userId?.toString().toLowerCase() === ui.userId?.toString().toLowerCase());
+            if (member) member.displayName = ui.displayName || ui.username;
           });
-        },
-        error: () => {}
+        }
       });
     }
   }
 
   checkIfAdmin(): void {
-    if (!this.roomMembers || !this.currentUser) {
-      this.isAdmin = false;
-      return;
-    }
-    const currentUserId = (this.currentUser.userId || this.currentUser.id || this.currentUser.userId)?.toString().toLowerCase();
-    console.log('Checking Admin Status:', {
-      currentUserId,
-      roomMembers: this.roomMembers,
-      selectedRoom: this.selectedRoom?.roomName
-    });
-    
+    const currentUserId = this.currentUser?.id?.toString().toLowerCase();
     const me = this.roomMembers.find(m => m.userId?.toString().toLowerCase() === currentUserId);
     this.isAdmin = me?.role === 'ADMIN';
-    console.log('Is Admin:', this.isAdmin, 'Role found:', me?.role);
-    
-    if (this.isAdmin) {
-      this.loadAllUsers();
-    }
+    if (this.isAdmin) this.loadAllUsers();
   }
 
   loadAllUsers(): void {
-    this.userService.getUsers().subscribe((users: any[]) => {
-      // Filter out users who are already in the room
-      this.allUsers = users.filter((u: any) => !this.roomMembers.some((m: any) => m.userId === u.userId));
+    this.userService.getUsers().subscribe((res: any) => {
+      const usersList = Array.isArray(res) ? res : (res?.users || []);
+      const memberIds = this.roomMembers.map(m => m.userId?.toString().toLowerCase());
+      this.allUsers = usersList.filter((u: any) => !memberIds.includes((u.userId || u.id)?.toString().toLowerCase()));
     });
   }
 
   addMember(): void {
     if (!this.selectedUserToAdd || !this.selectedRoom) return;
-
     this.roomService.addMember(this.selectedRoom.roomId, this.selectedUserToAdd.userId, this.selectedUserToAdd.username).subscribe({
       next: () => {
-        this.toastService.add({ severity: 'success', summary: 'Success', detail: 'User added to community' });
+        this.toastService.add({ severity: 'success', summary: 'Success', detail: 'User added' });
         this.loadRoomMembers(this.selectedRoom.roomId);
         this.selectedUserToAdd = null;
-      },
-      error: (err) => {
-        this.toastService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to add user' });
       }
     });
   }
 
-  // ROOM MANAGEMENT ACTIONS
   editRoom(): void {
     if (!this.selectedRoom) return;
-    this.editRoomForm = {
-      roomName: this.selectedRoom.roomName,
-      description: this.selectedRoom.description,
-      maxMembers: this.selectedRoom.maxMembers,
-      avatarUrl: this.selectedRoom.avatarUrl
-    };
+    this.editRoomForm = { ...this.selectedRoom };
     this.isEditingRoom = true;
   }
 
@@ -692,46 +656,33 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       next: (updated) => {
         this.selectedRoom = { ...this.selectedRoom, ...updated };
         this.isEditingRoom = false;
-        this.toastService.add({ severity: 'success', summary: 'Success', detail: 'Community updated' });
-        this.loadMyRooms(); // Refresh sidebar
-      },
-      error: () => this.toastService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update community' })
+        this.loadMyRooms();
+      }
     });
   }
 
   deleteRoom(): void {
-    if (!this.selectedRoom || !confirm('Are you sure you want to PERMANENTLY delete this community?')) return;
+    if (!this.selectedRoom || !confirm('Delete this community?')) return;
     this.roomService.deleteRoom(this.selectedRoom.roomId).subscribe({
       next: () => {
-        this.toastService.add({ severity: 'success', summary: 'Deleted', detail: 'Community has been removed' });
         this.displayRoomInfo = false;
         this.selectedRoom = null;
-        this.messages = [];
         this.loadMyRooms();
-      },
-      error: () => this.toastService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete community' })
+      }
     });
   }
 
   kickMember(member: any): void {
-    if (!this.selectedRoom || !confirm(`Remove ${member.displayName} from this community?`)) return;
+    if (!this.selectedRoom || !confirm(`Remove ${member.displayName}?`)) return;
     this.roomService.removeMember(this.selectedRoom.roomId, member.userId).subscribe({
-      next: () => {
-        this.toastService.add({ severity: 'success', summary: 'Kicked', detail: `${member.displayName} removed` });
-        this.loadRoomMembers(this.selectedRoom.roomId);
-      },
-      error: () => this.toastService.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove member' })
+      next: () => this.loadRoomMembers(this.selectedRoom.roomId)
     });
   }
 
   changeMemberRole(member: any, newRole: string): void {
     if (!this.selectedRoom) return;
     this.roomService.updateMemberRole(this.selectedRoom.roomId, member.userId, newRole).subscribe({
-      next: () => {
-        this.toastService.add({ severity: 'success', summary: 'Role Updated', detail: `${member.displayName} is now ${newRole}` });
-        this.loadRoomMembers(this.selectedRoom.roomId);
-      },
-      error: () => this.toastService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update role' })
+      next: () => this.loadRoomMembers(this.selectedRoom.roomId)
     });
   }
 
@@ -745,143 +696,51 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   loadRoomConversation(): void {
     if (!this.selectedRoom) return;
     this.roomService.getRoomMessages(this.selectedRoom.roomId).subscribe((res: any) => {
-      // Room messages might be an array directly or wrapped
       const msgs = Array.isArray(res) ? res : (res.messages || []);
       this.messages = msgs.map((m: any) => ({
         ...m,
-        mediaUrl: this.transformUrl(m.mediaUrl)
-      })).reverse(); // API usually returns descending
+        mediaUrl: this.transformUrl(m.mediaUrl || m.MediaUrl)
+      })).reverse();
       this.scrollToBottom();
+      
+      if (this.messages.length > 0) {
+        const lastMsg = this.messages[this.messages.length - 1];
+        const senderId = (lastMsg.senderId || lastMsg.SenderId)?.toString().toLowerCase();
+        const currentUserId = this.currentUser?.id?.toString().toLowerCase();
+        if (senderId !== currentUserId) {
+          this.signalrService.markRoomMessageAsRead(this.selectedRoom.roomId, lastMsg.messageId || lastMsg.MessageId);
+        }
+      }
     });
   }
 
   selectUser(user: any): void {
     this.selectedUser = user;
     this.selectedRoom = null;
-    
-    // Clear search and pin user at top immediately
-    this.searchQuery = '';
-    const exists = this.users.find(u => u.id?.toLowerCase() === user.id?.toLowerCase());
-    if (!exists) {
-      this.users = [user, ...this.users];
-    } else {
-      this.users = [exists, ...this.users.filter(u => u.id?.toLowerCase() !== user.id?.toLowerCase())];
-    }
-    
-    if (user && user.id) {
-      localStorage.setItem('lastSelectedUserId', user.id);
-      this.signalrService.markAllAsRead(user.id);
-      user.unreadCount = 0;
-      if (exists) exists.unreadCount = 0;
-      this.deduplicateSidebar();
-    }
-    
-    // Load the conversation messages
+    this.messages = [];
     this.loadConversation();
-    
-    // After a short delay, refresh the sidebar from DB so last messages & history persist
-    setTimeout(() => {
-      const currentSelectedId = this.selectedUser?.id;
-      this.messageService.getRecentChats().subscribe((chats: any) => {
-        const freshUsers = chats.map((c: any) => ({
-          id: c.userId,
-          displayName: c.displayName || c.username || 'Unknown User',
-          lastMessage: c.lastMessage?.content,
-          lastMessageTime: c.lastMessage?.sentAt,
-          isOnline: this.users.find(u => u.id?.toLowerCase() === c.userId?.toLowerCase())?.isOnline ?? false,
-          unreadCount: (c.userId?.toLowerCase() === currentSelectedId?.toLowerCase()) ? 0 : c.unreadCount
-        }));
-        // If selected user not in recent chats yet (no messages exchanged), keep them pinned at top
-        const inFresh = freshUsers.find((u: any) => u.id?.toLowerCase() === currentSelectedId?.toLowerCase());
-        if (!inFresh && currentSelectedId) {
-          this.users = [this.selectedUser, ...freshUsers];
-        } else {
-          // Move selected user to top
-          this.users = [
-            ...(inFresh ? [inFresh] : []),
-            ...freshUsers.filter((u: any) => u.id?.toLowerCase() !== currentSelectedId?.toLowerCase())
-          ];
-        }
-        
-        this.enrichUnknownUsers();
-        // Refresh online status after update
-        this.refreshOnlineStatus();
-      });
-    }, 500);
   }
 
   loadConversation(): void {
     if (!this.selectedUser) return;
     this.messageService.getConversation(this.selectedUser.id).subscribe((res: any) => {
-      if (res && res.messages) {
-        this.messages = res.messages.map((m: any) => ({
-          ...m,
-          mediaUrl: this.transformUrl(m.mediaUrl)
-        }));
-        this.scrollToBottom();
-      }
+      const msgs = Array.isArray(res) ? res : (res.messages || []);
+      this.messages = msgs.map((m: any) => ({
+        ...m,
+        mediaUrl: this.transformUrl(m.mediaUrl || m.MediaUrl)
+      })).reverse();
+      this.scrollToBottom();
+      this.signalrService.markAllAsRead(this.selectedUser.id);
     });
   }
 
-  sendMessage(): void {
-    if (!this.newMessage.trim()) return;
-
-    if (this.selectedUser) {
-      this.signalrService.sendMessage(this.selectedUser.id, this.newMessage);
-    } else if (this.selectedRoom) {
-      this.signalrService.sendRoomMessage(this.selectedRoom.roomId, this.newMessage);
-    }
-
-    this.newMessage = '';
-  }
-
-  onTyping(): void {
-    if (this.selectedUser) {
-      this.signalrService.sendTypingIndicator(this.selectedUser.id, true);
-    }
-  }
-
-  onImageError(event: any): void {
-    const img = event.target;
-    console.error('Image failed to load:', img.src);
-    // Fallback to a professional placeholder instead of showing broken icon
-    img.src = 'assets/images/image-placeholder.png'; 
-    // If that also fails (e.g. assets not there), hide it or show a generic icon via CSS
-    img.style.display = 'none';
-    img.parentElement.innerHTML += '<div class="media-error-placeholder"><i class="pi pi-image"></i><span>Image unavailable</span></div>';
-  }
-
-  private scrollToBottom(): void {
-    setTimeout(() => {
-      try {
-        if (this.myScrollContainer) {
-          this.myScrollContainer.nativeElement.scrollTop = this.myScrollContainer.nativeElement.scrollHeight;
-        }
-      } catch (err) {}
-    }, 100);
-  }
-
-  private deduplicateSidebar(): void {
-    if (!this.users) return;
-    const unique = new Map<string, any>();
-    this.users.forEach(u => {
-      const id = u.id?.toLowerCase();
-      if (id) {
-        if (!unique.has(id)) {
-          unique.set(id, { ...u });
-        } else {
-          const existing = unique.get(id);
-          // Merge logic
-          unique.set(id, {
-            ...existing,
-            ...u,
-            unreadCount: (existing.id === this.selectedUser?.id) ? 0 : Math.max(existing.unreadCount || 0, u.unreadCount || 0),
-            lastMessageTime: (u.lastMessageTime > existing.lastMessageTime) ? u.lastMessageTime : existing.lastMessageTime
-          });
-        }
-      }
+  deduplicateSidebar(): void {
+    const seen = new Set();
+    this.users = this.users.filter(u => {
+      const id = u.id?.toString().toLowerCase();
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
     });
-    this.users = Array.from(unique.values());
-    this.sortUsersByTime();
   }
 }

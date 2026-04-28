@@ -22,6 +22,7 @@ export class SignalrService {
   public roomMessageReceived$ = new Subject<any>();
   public roomMessageEdited$ = new Subject<any>();
   public roomMessageDeleted$ = new Subject<string>();
+  public roomMessageRead$ = new Subject<any>();
 
   constructor(private authService: AuthService) {
     // Initialization is handled by LayoutComponent to control lifecycle
@@ -123,6 +124,10 @@ export class SignalrService {
     this.hubConnection?.on('RoomMessageDeleted', (messageId) => {
       this.roomMessageDeleted$.next(messageId);
     });
+
+    this.hubConnection?.on('RoomMessageRead', (data) => {
+      this.roomMessageRead$.next(data);
+    });
   }
 
   public async requestOnlineUsers(): Promise<void> {
@@ -214,6 +219,12 @@ export class SignalrService {
   public async markAllAsRead(otherUserId: string): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
       await this.hubConnection.invoke('MarkAllAsRead', otherUserId);
+    }
+  }
+
+  public async markRoomMessageAsRead(roomId: string, messageId: string): Promise<void> {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      await this.hubConnection.invoke('MarkRoomMessageRead', roomId, messageId);
     }
   }
 }
