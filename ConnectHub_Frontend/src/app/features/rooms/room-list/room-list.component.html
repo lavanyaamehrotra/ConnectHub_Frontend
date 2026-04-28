@@ -1,0 +1,146 @@
+<div class="rooms-container fade-in">
+  <div class="glass-panel">
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-info">
+        <h1 class="text-4xl font-black gradient-text m-0 mb-1">Communities</h1>
+        <p class="text-secondary text-lg font-medium opacity-60">Connect, share and grow with your passions</p>
+      </div>
+      <p-button label="Create Community" icon="pi pi-plus" (click)="showCreateDialog()" 
+                styleClass="action-btn-premium px-5 py-3 text-base"></p-button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex justify-content-center mb-6">
+      <div class="tab-nav-container">
+        <div class="tab-btn" [class.active]="activeTab === 0" (click)="activeTab = 0">
+          Explore
+        </div>
+        <div class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">
+          My Communities
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 flex flex-column">
+      <!-- Explore View: Premium Table -->
+      <div *ngIf="activeTab === 0" class="flex-1 flex flex-column">
+        <p-table [value]="rooms" [rows]="5" [paginator]="true" 
+                 styleClass="p-datatable-custom" 
+                 responsiveLayout="scroll">
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="col-community">Community</th>
+              <th class="col-desc">Description</th>
+              <th class="col-capacity">Capacity</th>
+              <th class="col-type">Type</th>
+              <th class="col-action">Action</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-room>
+            <tr>
+              <td>
+                <div class="flex align-items-center gap-3">
+                  <p-avatar [image]="'https://api.dicebear.com/7.x/initials/svg?seed=' + room.roomName" 
+                            shape="circle" styleClass="community-avatar-list"></p-avatar>
+                  <div class="flex flex-column">
+                    <span class="font-black text-lg text-primary">{{room.roomName}}</span>
+                    <span class="text-xs opacity-50 font-bold">{{room.memberCount}} members</span>
+                  </div>
+                </div>
+              </td>
+              <td class="col-desc text-secondary line-height-3 text-base font-medium">{{room.description || 'Welcome to our community!'}}</td>
+              <td>
+                <div class="members-badge">
+                  {{room.memberCount}} / {{room.maxMembers}}
+                </div>
+              </td>
+              <td>
+                <span class="room-type-tag" [class]="'tag-' + (room.roomType | lowercase)">
+                  {{ room.roomType }}
+                </span>
+              </td>
+              <td>
+                <p-button [label]="isMember(room.roomId) ? 'Open' : 'Join'" 
+                          [icon]="isMember(room.roomId) ? 'pi pi-comments' : 'pi pi-user-plus'" 
+                          (click)="handleRoomAction(room.roomId)"
+                          styleClass="btn-tag-style"></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <!-- My Communities: Pretty Grid -->
+      <div *ngIf="activeTab === 1" class="flex-1">
+        <div class="grid">
+          <div *ngFor="let room of myRooms" class="col-12 md:col-6 lg:col-4 p-4">
+            <div class="community-card">
+              <div class="card-header">
+                <p-avatar [image]="'https://api.dicebear.com/7.x/initials/svg?seed=' + room.roomName" 
+                          shape="circle" size="large" styleClass="community-avatar-list"></p-avatar>
+                <span class="room-type-tag" [class]="'tag-' + (room.roomType | lowercase)">
+                  {{ room.roomType }}
+                </span>
+              </div>
+              
+              <div class="room-name">{{room.roomName}}</div>
+              <div class="room-desc text-overflow-ellipsis overflow-hidden">{{room.description || 'Join the conversation and catch up with updates.'}}</div>
+              
+              <div class="card-footer">
+                <div class="member-info">
+                  <i class="pi pi-users text-primary"></i>
+                  <span>{{room.memberCount}} Members</span>
+                </div>
+                <button class="chat-btn-modern" (click)="openRoom(room.roomId)">
+                  <span>Chat Now</span>
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Room Dialog: TRULY PROFESSIONAL -->
+<p-dialog header="Launch New Community" [(visible)]="displayCreateDialog" [modal]="true" 
+          [style]="{width: '580px'}" styleClass="custom-dialog" [draggable]="false" [resizable]="false">
+  <div class="dialog-content py-4">
+    <div class="field mb-5">
+      <label>Community Name</label>
+      <input type="text" pInputText [(ngModel)]="newRoom.roomName" 
+             class="w-full" placeholder="e.g. Pixel Artists Guild" />
+    </div>
+    
+    <div class="field mb-5">
+      <label>Description</label>
+      <textarea pInputTextarea [(ngModel)]="newRoom.description" 
+                rows="4" class="w-full" 
+                placeholder="Tell people what your community is all about..."></textarea>
+    </div>
+
+    <div class="grid">
+      <div class="col-6 field">
+        <label>Visibility</label>
+        <p-dropdown [options]="roomTypes" [(ngModel)]="newRoom.roomType" 
+                    optionLabel="label" optionValue="value" 
+                    appendTo="body" styleClass="w-full"></p-dropdown>
+      </div>
+      <div class="col-6 field">
+        <label>Member Limit</label>
+        <p-inputNumber [(ngModel)]="newRoom.maxMembers" 
+                      [min]="2" [max]="500" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-center pt-2">
+      <p-button label="Launch Community" icon="pi pi-rocket" (click)="createRoom()" 
+                styleClass="action-btn-premium px-8 py-4 text-xl"></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

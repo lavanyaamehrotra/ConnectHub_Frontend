@@ -1,0 +1,32 @@
+// Cool Blue Premium Color Palette
+$color-deep: #384959;    // Primary (Dark Slate)
+$color-muted: #6A89A7;   // Secondary (Steel Blue)
+$color-sky: #B3D8FF;     // Accent (Lighter Sky Blue)
+$color-blue-white: #F0F7FF; // Background (Very Light Blue Tint)
+$color-rose: #BDDDFC;    // Surface (Soft Powder Blue)
+$color-dusty: #536B82;   // Detail (Deep Ocean)
+
+// Functional Variables
+$bg-color: $color-blue-white;
+$surface-color: #FFFFFF; 
+$primary-color: #384959;
+$accent-color: #88BDF2;
+
+$text-primary: #1A252F;  // Very dark slate for text
+$text-secondary: #384959;
+$border-color: rgba($color-muted, 0.2);
+
+$font-family: 'Inter', 'Poppins', sans-serif;
+$header-height: 70px;
+$sidebar-width: 260px;
+$transition-base: 0.3s ease;
+$border-radius: 12px;
+
+// Glassmorphism mixin
+@mixin glass-effect {
+  background: rgba($surface-color, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba($color-dusty, 0.2);
+  box-shadow: 0 8px 32px 0 rgba($color-deep, 0.08);
+}

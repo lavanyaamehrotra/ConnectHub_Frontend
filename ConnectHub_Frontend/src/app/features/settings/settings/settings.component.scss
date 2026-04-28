@@ -1,0 +1,356 @@
+@use "../../../../assets/styles/variables" as *;
+
+.settings-wrapper {
+  max-width: 700px;
+  margin: 0 auto;
+  padding-bottom: 4rem;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 0 1rem 2rem 1rem;
+  }
+}
+
+.settings-header {
+  margin-bottom: 3rem;
+  text-align: center;
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, $primary-color, $accent-color);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1.5px;
+
+    @media (max-width: 576px) {
+      font-size: 1.8rem;
+    }
+  }
+
+  p {
+    color: $text-secondary;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.glass-card {
+  @include glass-effect;
+  background: rgba($surface-color, 0.4);
+  border-radius: 20px;
+  padding: 1.5rem; // Smaller padding
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 45px rgba($primary-color, 0.15);
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  .header-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba($primary-color, 0.1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $primary-color;
+    font-size: 1.5rem;
+
+    &.security { background: rgba(#3b82f6, 0.1); color: #3b82f6; }
+    &.danger { background: rgba(#ef4444, 0.1); color: #ef4444; }
+  }
+
+  .header-text {
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: $text-primary;
+      margin: 0;
+    }
+    p {
+      font-size: 0.9rem;
+      color: $text-secondary;
+      margin: 0;
+    }
+  }
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: $text-primary;
+    margin-left: 0.25rem;
+  }
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  i {
+    position: absolute;
+    left: 1rem;
+    color: $text-secondary;
+    font-size: 0.9rem;
+    z-index: 1;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.8rem;
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba($primary-color, 0.1) !important;
+    border-radius: 12px !important;
+    color: $text-primary !important;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+
+    &:focus {
+      background: rgba(255, 255, 255, 0.6) !important;
+      border-color: $primary-color !important;
+      box-shadow: 0 0 0 4px rgba($primary-color, 0.1) !important;
+      outline: none;
+    }
+  }
+
+  textarea {
+    padding-left: 2.8rem;
+  }
+}
+
+::ng-deep .glass-input {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: 1px solid rgba($primary-color, 0.1) !important;
+  border-radius: 12px !important;
+  color: $text-primary !important;
+  padding: 0.8rem 1rem !important;
+  
+  &:focus {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border-color: $primary-color !important;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+// PREMIUM BUTTON STYLES
+::ng-deep .glow-button {
+  background: linear-gradient(135deg, $primary-color, $accent-color) !important;
+  border: none !important;
+  color: white !important;
+  padding: 0.8rem 2rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 8px 20px rgba($primary-color, 0.4) !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 12px 25px rgba($primary-color, 0.5) !important;
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98) !important;
+  }
+
+  &:disabled {
+    background: rgba($text-secondary, 0.3) !important;
+    box-shadow: none !important;
+    opacity: 0.7;
+  }
+}
+
+::ng-deep .glow-button-alt {
+  background: transparent !important;
+  border: 2px solid $primary-color !important;
+  color: $primary-color !important;
+  padding: 0.8rem 2rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 15px rgba($primary-color, 0.1) !important;
+  transition: all 0.4s ease !important;
+
+  &:hover:not(:disabled) {
+    background: rgba($primary-color, 0.05) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba($primary-color, 0.2) !important;
+  }
+}
+
+::ng-deep .p-button-danger {
+  background: linear-gradient(135deg, #ff4b2b, #ff416c) !important;
+  border: none !important;
+  color: white !important;
+  padding: 0.6rem 1.5rem !important; // Smaller padding
+  font-size: 0.85rem !important;      // Smaller font
+  font-weight: 700 !important;
+  box-shadow: 0 6px 15px rgba(239, 68, 68, 0.25) !important;
+  transition: all 0.4s ease !important;
+
+  &:hover {
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 12px 25px rgba(239, 68, 68, 0.5) !important;
+  }
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.danger-card {
+  border: 1px solid rgba(#ef4444, 0.2);
+  background: rgba(#ef4444, 0.02);
+}
+
+.danger-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  border: 1px dashed rgba(#ef4444, 0.3);
+
+  .danger-desc {
+    h3 {
+      font-size: 1.1rem;
+      color: $text-primary;
+      margin-bottom: 0.2rem;
+    }
+    p {
+      color: $text-secondary;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+  }
+}
+
+.avatar-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 2rem;
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+  }
+
+  .avatar-preview-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    &:hover {
+      transform: scale(1.05);
+      .upload-overlay { opacity: 1; }
+    }
+
+    ::ng-deep .settings-avatar {
+      width: 100px !important;
+      height: 100px !important;
+      border: 4px solid white;
+      box-shadow: 0 8px 25px rgba($primary-color, 0.2);
+    }
+
+    .upload-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      backdrop-filter: blur(2px);
+
+      &.loading {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.6);
+        color: $primary-color;
+      }
+    }
+  }
+
+  .avatar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    .username {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: $text-primary;
+    }
+
+    .upload-hint {
+      font-size: 0.85rem;
+      color: $text-secondary;
+      font-weight: 500;
+    }
+  }
+}
+
+.text-danger { color: #ef4444 !important; }
+
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+  .danger-content { flex-direction: column; text-align: center; gap: 1rem; }
+}

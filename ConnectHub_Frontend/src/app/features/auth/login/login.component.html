@@ -1,0 +1,65 @@
+<div class="auth-container fade-in">
+  <div class="auth-card">
+    <div class="auth-header">
+      <i class="pi pi-bolt logo-icon"></i>
+      <h1>Welcome Back</h1>
+      <p>Log in to access your ConnectHub</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-alert">
+      {{ errorMessage }}
+    </div>
+
+    <!-- REACTIVATION BANNER -->
+    <div *ngIf="showReactivateBanner" class="reactivate-banner">
+      <div class="reactivate-icon">😴</div>
+      <div class="reactivate-content">
+        <h3>Account Deactivated</h3>
+        <p>Your account is currently deactivated. Would you like to bring it back?</p>
+        <p-button
+          label="Yes, Reactivate My Account!"
+          (click)="reactivateAccount()"
+          [loading]="reactivating"
+          icon="pi pi-refresh"
+          styleClass="p-button-rounded reactivate-btn">
+        </p-button>
+        <p-button
+          label="Cancel"
+          (click)="showReactivateBanner = false"
+          styleClass="p-button-text p-button-sm">
+        </p-button>
+      </div>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-field">
+        <label for="usernameOrEmail">Username or Email</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-user"></i>
+          <input pInputText id="usernameOrEmail" type="text" formControlName="usernameOrEmail" placeholder="Enter username or email" />
+        </span>
+      </div>
+
+      <div class="form-field">
+        <label for="password">Password</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-lock"></i>
+          <p-password id="password" formControlName="password" [toggleMask]="true" placeholder="Enter your password" [feedback]="false" styleClass="w-full"></p-password>
+        </span>
+      </div>
+
+      <p-button label="Log In" type="submit" [disabled]="loginForm.invalid" [loading]="loading" styleClass="p-button-primary w-full mt-3"></p-button>
+
+      <div class="auth-divider">
+        <span>OR</span>
+      </div>
+
+      <div id="google-btn" class="google-login-btn"></div>
+    </form>
+
+    <div class="auth-footer">
+      <span>Don't have an account? </span>
+      <a routerLink="/auth/register">Sign Up</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+<div class="auth-container fade-in">
+  <div class="auth-card">
+    <div class="auth-header">
+      <i class="pi pi-user-plus logo-icon"></i>
+      <h1>Join ConnectHub</h1>
+      <p>Create an account to get started</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-alert">
+      {{ errorMessage }}
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-field">
+        <label for="username">Username</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-user"></i>
+          <input pInputText id="username" type="text" formControlName="username" placeholder="Choose a username" />
+        </span>
+      </div>
+
+      <div class="form-field">
+        <label for="displayName">Display Name</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-id-card"></i>
+          <input pInputText id="displayName" type="text" formControlName="displayName" placeholder="Enter your full name" />
+        </span>
+      </div>
+
+      <div class="form-field">
+        <label for="email">Email</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-envelope"></i>
+          <input pInputText id="email" type="email" formControlName="email" placeholder="Enter your email" />
+        </span>
+      </div>
+
+      <div class="form-field">
+        <label for="password">Password</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-lock"></i>
+          <p-password id="password" formControlName="password" [toggleMask]="true" placeholder="Create a password" styleClass="w-full"></p-password>
+        </span>
+      </div>
+
+      <p-button label="Sign Up" type="submit" [disabled]="registerForm.invalid" [loading]="loading" styleClass="p-button-primary w-full mt-3"></p-button>
+
+      <div class="auth-divider">
+        <span>OR</span>
+      </div>
+
+      <div id="google-btn" class="google-login-btn"></div>
+    </form>
+
+    <div class="auth-footer">
+      <span>Already have an account? </span>
+      <a routerLink="/auth/login">Log In</a>
+    </div>
+  </div>
+</div>

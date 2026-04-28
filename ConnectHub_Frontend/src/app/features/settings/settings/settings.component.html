@@ -1,0 +1,116 @@
+<p-toast></p-toast>
+
+<div class="settings-wrapper fade-in">
+  <!-- PAGE HEADER -->
+  <div class="settings-header">
+    <h1 class="glow-text">Account Settings</h1>
+    <p>Personalize your experience and secure your account</p>
+  </div>
+
+  <div class="settings-content">
+    
+    <!-- PROFILE SECTION -->
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-icon"><i class="pi pi-user-edit"></i></div>
+        <div class="header-text">
+          <h2>Profile Information</h2>
+          <p>Update your public identity on ConnectHub</p>
+        </div>
+      </div>
+
+      <div class="avatar-upload-container">
+        <div class="avatar-preview-wrapper" (click)="fileInput.click()" pTooltip="Change Profile Picture" tooltipPosition="bottom">
+          <p-avatar [image]="(currentUser?.avatarUrl | transformMediaUrl) || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + currentUser?.username)" 
+                    size="xlarge" shape="circle" styleClass="settings-avatar"></p-avatar>
+          <div class="upload-overlay" [class.loading]="loadingAvatar">
+            <i [class]="loadingAvatar ? 'pi pi-spin pi-spinner' : 'pi pi-camera'"></i>
+          </div>
+          <input #fileInput type="file" (change)="onAvatarSelected($event)" accept="image/*" style="display: none">
+        </div>
+        <div class="avatar-info">
+          <span class="username">{{ currentUser?.displayName || currentUser?.username }}</span>
+          <span class="upload-hint">{{ '@' + currentUser?.username }} • Click avatar to upload</span>
+        </div>
+      </div>
+      
+      <form [formGroup]="profileForm" (ngSubmit)="updateProfile()" class="settings-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="displayName">Display Name</label>
+            <div class="input-wrapper">
+              <i class="pi pi-user"></i>
+              <input pInputText id="displayName" formControlName="displayName" placeholder="How should we call you?" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="bio">Short Bio</label>
+          <div class="input-wrapper">
+            <i class="pi pi-pencil"></i>
+            <textarea pInputText id="bio" formControlName="bio" placeholder="Tell the world a bit about yourself..." rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <p-button label="Save Changes" type="submit" [loading]="loadingProfile" [disabled]="profileForm.invalid" icon="pi pi-check" styleClass="p-button-rounded glow-button"></p-button>
+        </div>
+      </form>
+    </div>
+
+    <!-- SECURITY SECTION -->
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-icon security"><i class="pi pi-shield"></i></div>
+        <div class="header-text">
+          <h2>Security & Password</h2>
+          <p>Protect your account with a strong password</p>
+        </div>
+      </div>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="settings-form">
+        <div class="form-group">
+          <label for="oldPassword">Current Password</label>
+          <p-password id="oldPassword" formControlName="oldPassword" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="glass-input"></p-password>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newPassword">New Password</label>
+            <p-password id="newPassword" formControlName="newPassword" [toggleMask]="true" styleClass="w-full" inputStyleClass="glass-input"></p-password>
+          </div>
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <p-password id="confirmPassword" formControlName="confirmPassword" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="glass-input"></p-password>
+            <small *ngIf="passwordForm.errors?.['mismatch'] && passwordForm.get('confirmPassword')?.touched" class="error-text">Passwords don't match!</small>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <p-button label="Update Password" type="submit" [loading]="loadingPassword" [disabled]="passwordForm.invalid" icon="pi pi-lock" styleClass="p-button-rounded p-button-outlined glow-button-alt"></p-button>
+        </div>
+      </form>
+    </div>
+
+    <!-- DANGER ZONE -->
+    <div class="glass-card danger-card">
+      <div class="card-header">
+        <div class="header-icon danger"><i class="pi pi-exclamation-triangle"></i></div>
+        <div class="header-text">
+          <h2 class="text-danger">Danger Zone</h2>
+          <p>Irreversible account actions</p>
+        </div>
+      </div>
+      
+      <div class="danger-content">
+        <div class="danger-desc">
+          <h3>Deactivate Account</h3>
+          <p>This will temporarily hide your profile and messages. You can restore it later.</p>
+        </div>
+        <p-button label="Deactivate My Account" (click)="deactivateAccount()" [loading]="loadingDeactivate" icon="pi pi-trash" styleClass="p-button-danger p-button-rounded glow-button"></p-button>
+      </div>
+    </div>
+
+  </div>
+</div>

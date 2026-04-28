@@ -1,0 +1,311 @@
+@use "../../../../assets/styles/variables" as *;
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(-45deg, $color-blue-white, $color-sky, rgba($color-muted, 0.4), rgba($color-deep, 0.2));
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+  }
+
+  &::before {
+    background: rgba($color-deep, 0.2);
+    width: 400px;
+    height: 400px;
+    top: -100px;
+    left: -100px;
+    animation: float 8s ease-in-out infinite;
+  }
+
+  &::after {
+    background: rgba($color-muted, 0.2);
+    width: 300px;
+    height: 300px;
+    bottom: -50px;
+    right: -100px;
+    animation: float 6s ease-in-out infinite reverse;
+  }
+}
+
+.auth-card {
+  @include glass-effect;
+  background: rgba($surface-color, 0.35);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  padding: 3rem 2.5rem;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 40px rgba($primary-color, 0.15);
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 1;
+
+  @media (max-width: 480px) {
+    padding: 2.5rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px rgba($primary-color, 0.2);
+  }
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+
+  .logo-icon {
+    font-size: 3.5rem;
+    color: $primary-color;
+    margin-bottom: 1.2rem;
+    animation: pulse 2s infinite;
+    filter: drop-shadow(0 4px 8px rgba($primary-color, 0.3));
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: $text-primary;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+
+    @media (max-width: 480px) {
+      font-size: 1.7rem;
+    }
+  }
+
+    p {
+      color: $text-secondary;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .error-alert {
+      background: rgba(239, 68, 68, 0.15);
+      color: #E11D48;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      text-align: center;
+      font-weight: 500;
+    }
+  }
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-left: 0.2rem;
+  }
+
+  .p-input-icon-left {
+    width: 100%;
+    
+    > i { 
+      color: $primary-color; 
+      z-index: 1;
+    }
+    
+    ::ng-deep .p-password {
+      width: 100%;
+      display: block;
+    }
+
+    ::ng-deep input {
+      width: 100%;
+      padding-left: 2.5rem;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.6);
+      transition: all 0.3s ease;
+      font-size: 1rem;
+      padding-top: 0.8rem;
+      padding-bottom: 0.8rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      &:focus {
+        background: #fff;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 4px rgba($primary-color, 0.15);
+      }
+    }
+    
+    ::ng-deep .p-password input {
+      padding-right: 2.5rem; /* Make room for the toggle mask eye icon */
+    }
+  }
+}
+
+::ng-deep .p-button-primary {
+  padding: 1rem !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, $primary-color 0%, darken($primary-color, 12%) 100%) !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba($primary-color, 0.25) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba($primary-color, 0.35) !important;
+    background: linear-gradient(135deg, darken($primary-color, 5%) 0%, darken($primary-color, 15%) 100%) !important;
+  }
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: $text-secondary;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+
+  &::before, &::after {
+    content: "";
+    flex: 1;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+  }
+
+  span {
+    margin: 0 1.2rem;
+    opacity: 0.8;
+  }
+}
+
+.google-login-btn {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  
+  ::ng-deep iframe {
+    width: 100% !important;
+    border-radius: 12px !important;
+  }
+}
+
+
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.95rem;
+
+  span { color: $text-secondary; }
+  
+  a {
+    font-weight: 700;
+    margin-left: 0.3rem;
+    color: $primary-color;
+    
+    &:hover {
+      color: $accent-color;
+      text-decoration: underline;
+    }
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-20px) translateX(20px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+// REACTIVATION BANNER
+.reactivate-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, rgba($primary-color, 0.08), rgba($accent-color, 0.08));
+  border: 1px solid rgba($primary-color, 0.25);
+  border-radius: 16px;
+  animation: fadeInDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  .reactivate-icon {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .reactivate-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: $primary-color;
+      margin: 0;
+    }
+
+    p {
+      font-size: 0.85rem;
+      color: $text-secondary;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    ::ng-deep .reactivate-btn {
+      background: linear-gradient(135deg, $primary-color, $accent-color) !important;
+      border: none !important;
+      font-size: 0.85rem !important;
+      padding: 0.5rem 1rem !important;
+      box-shadow: 0 4px 12px rgba($primary-color, 0.3) !important;
+      margin-top: 0.25rem;
+
+      &:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 18px rgba($primary-color, 0.4) !important;
+      }
+    }
+  }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

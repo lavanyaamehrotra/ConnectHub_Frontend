@@ -1,0 +1,22 @@
+<div class="dashboard-container fade-in">
+  <div class="dashboard-header">
+    <div class="welcome-text">
+      <h1>Welcome to ConnectHub ✨</h1>
+      <p>Your microservices-powered collaboration workspace. Select a service below to get started.</p>
+    </div>
+  </div>
+
+  <div class="services-grid">
+    <div *ngFor="let service of services" class="service-card" [routerLink]="service.link">
+      <div class="icon-wrapper" [style.color]="service.color">
+        <i class="pi" [ngClass]="service.icon"></i>
+      </div>
+      <h3>{{ service.title }}</h3>
+      <p>{{ service.description }}</p>
+      
+      <div class="card-footer">
+        <span class="launch-text">Launch App <i class="pi pi-arrow-right"></i></span>
+      </div>
+    </div>
+  </div>
+</div>

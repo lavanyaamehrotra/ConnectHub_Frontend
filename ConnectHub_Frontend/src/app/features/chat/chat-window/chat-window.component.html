@@ -1,0 +1,330 @@
+<div class="chat-container fade-in">
+  <!-- Left Sidebar: User List -->
+  <div class="user-sidebar" [class.hidden-mobile]="selectedUser || selectedRoom">
+    <div class="sidebar-mobile-header">
+      <h2>Messages</h2>
+    </div>
+    <div class="search-box">
+      <span class="p-input-icon-left w-full">
+        <i class="pi pi-search"></i>
+        <input type="text" pInputText placeholder="Search people..." class="w-full" [(ngModel)]="searchQuery" (input)="searchUsers()">
+      </span>
+    </div>
+
+    <p-scrollPanel [style]="{width: '100%', height: 'calc(100vh - 200px)'}">
+      <!-- Communities Section -->
+      <div class="sidebar-section" *ngIf="myRooms.length > 0">
+        <div class="section-header">COMMUNITIES</div>
+        <div class="user-list">
+          <div *ngFor="let room of myRooms" 
+               class="user-item room-item" 
+               [class.active]="selectedRoom?.roomId === room.roomId"
+               (click)="selectRoom(room)">
+            <div class="avatar-container">
+              <p-avatar [image]="'https://api.dicebear.com/7.x/initials/svg?seed=' + room.roomName" 
+                        shape="circle" size="large" styleClass="community-avatar-list"></p-avatar>
+            </div>
+            <div class="user-details">
+              <div class="user-name">{{ room.roomName }}</div>
+              <div class="last-msg">{{ room.memberCount }} members</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- People Section -->
+      <div class="sidebar-section mt-4">
+        <div class="section-header">PEOPLE</div>
+        <div class="user-list">
+          <div *ngFor="let user of users" 
+               class="user-item" 
+               [class.active]="selectedUser?.id === user.id"
+               (click)="selectUser(user)">
+            <div class="avatar-container">
+              <p-avatar [image]="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.displayName" 
+                        shape="circle" size="large"></p-avatar>
+              <div class="status-indicator" [class.online]="user.isOnline"></div>
+            </div>
+            <div class="user-details">
+              <div class="user-name">{{ user.displayName }}</div>
+              <div class="last-msg text-overflow-ellipsis">{{ user.lastMessage || 'Start a conversation' }}</div>
+            </div>
+            <div class="time-badge" *ngIf="user.lastMessageTime">
+              {{ user.lastMessageTime | date:'shortTime' }}
+              <div class="mt-1 flex justify-content-end" *ngIf="user.unreadCount > 0 && selectedUser?.id?.toLowerCase() !== user.id?.toLowerCase()">
+                <p-badge [value]="user.unreadCount" severity="danger"></p-badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </p-scrollPanel>
+  </div>
+
+  <!-- Right Side: Chat Window -->
+  <div class="chat-main" [class.visible-mobile]="selectedUser || selectedRoom" *ngIf="selectedUser || selectedRoom; else noSelection">
+    <div class="chat-header">
+      <div class="header-user">
+        <button class="back-btn-mobile" (click)="selectedUser = null; selectedRoom = null">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <p-avatar [image]="selectedUser ? ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedUser.displayName) : ('https://api.dicebear.com/7.x/initials/svg?seed=' + selectedRoom.roomName)" 
+                  shape="circle" size="large" styleClass="community-avatar-list"></p-avatar>
+        <div class="header-details">
+          <div class="header-name">{{ selectedUser ? selectedUser.displayName : selectedRoom.roomName }}</div>
+          <div class="header-status" *ngIf="typingUser">{{ typingUser }} is typing...</div>
+          <div class="header-status" *ngIf="!typingUser && selectedUser">{{ selectedUser.isOnline ? 'Online' : 'Offline' }}</div>
+          <div class="header-status" *ngIf="!typingUser && selectedRoom">{{ selectedRoom.memberCount }} members</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="message-search-container" *ngIf="isSearchingMessages">
+          <input type="text" pInputText placeholder="Search messages..." 
+                 [(ngModel)]="messageSearchQuery" (input)="searchMessages()"
+                 class="message-search-input p-inputtext-sm">
+        </div>
+        <p-button icon="pi pi-search" (click)="toggleMessageSearch()" 
+                  styleClass="p-button-rounded header-action-btn"></p-button>
+        <p-button icon="pi pi-info-circle" (click)="showRoomInfo()" 
+                  styleClass="p-button-rounded header-action-btn"></p-button>
+      </div>
+    </div>
+
+    <div class="messages-area" #scrollMe>
+      <div *ngFor="let msg of messages" class="message-wrapper" [class.sent]="msg.senderId === currentUser.id">
+        <div class="message-bubble" [class.deleted]="msg.isDeleted">
+          <div class="message-media" *ngIf="msg.mediaUrl && !msg.isDeleted">
+            <img *ngIf="msg.messageType?.toUpperCase() === 'IMAGE'" [src]="msg.mediaUrl | transformMediaUrl" class="chat-img" />
+            <a *ngIf="msg.messageType?.toUpperCase() === 'FILE'" [href]="msg.mediaUrl | transformMediaUrl" target="_blank" class="chat-file">
+              <i class="pi pi-file"></i> Download File
+            </a>
+          </div>
+          <div class="message-text" *ngIf="editingMessageId !== msg.messageId">
+            <span *ngIf="msg.isDeleted" class="deleted-text">
+              <i class="pi pi-ban"></i> This message was deleted
+            </span>
+            <span *ngIf="!msg.isDeleted">{{ msg.content }}</span>
+          </div>
+          
+          <div class="edit-area" *ngIf="editingMessageId === msg.messageId">
+            <input type="text" pInputText [(ngModel)]="editContent" (keyup.enter)="saveEdit()" class="edit-input" />
+            <div class="edit-actions">
+              <p-button icon="pi pi-check" (click)="saveEdit()" styleClass="p-button-text p-button-success p-button-sm"></p-button>
+              <p-button icon="pi pi-times" (click)="cancelEdit()" styleClass="p-button-text p-button-danger p-button-sm"></p-button>
+            </div>
+          </div>
+
+          <div class="message-time">
+            {{ msg.sentAt | date:'shortTime' }}
+            <span *ngIf="msg.isEdited" class="edited-label">(edited)</span>
+            <!-- Checkmarks for sent messages -->
+            <span class="read-status ml-1" *ngIf="msg.senderId === currentUser.id">
+              <i class="pi pi-check" *ngIf="!msg.isRead" style="font-size: 0.7rem;"></i>
+              <i class="pi pi-check-circle" *ngIf="msg.isRead" style="color: #4ade80; font-size: 0.7rem;" pTooltip="Read at {{msg.readAt | date:'shortTime'}}"></i>
+            </span>
+          </div>
+
+          <!-- Action Icons (Visible on hover or specifically for own messages) -->
+          <div class="message-actions" *ngIf="msg.senderId === currentUser.id && !msg.isDeleted && editingMessageId !== msg.messageId">
+            <button class="action-btn edit-btn" (click)="startEdit(msg)">
+              <i class="pi pi-pencil"></i>
+            </button>
+            <button class="action-btn delete-btn" (click)="selectedMessageForMenu = msg; menu.toggle($event)">
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PrimeNG Menu for Delete Options -->
+    <p-menu #menu [model]="deleteMenuItems" [popup]="true" appendTo="body" styleClass="custom-chat-menu"></p-menu>
+
+    <div class="chat-input-area">
+      <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)">
+      <p-button icon="pi pi-plus" (click)="fileInput.click()" styleClass="p-button-rounded file-upload-btn"></p-button>
+      <div class="input-wrapper">
+        <input type="text" 
+               pInputText 
+               placeholder="Type a message..." 
+               [(ngModel)]="newMessage" 
+               (keyup.enter)="sendMessage()"
+               (input)="onTyping()">
+      </div>
+      <p-button icon="pi pi-send" 
+                styleClass="p-button-rounded" 
+                [disabled]="!newMessage.trim()"
+                (click)="sendMessage()"></p-button>
+    </div>
+  </div>
+
+  <ng-template #noSelection>
+    <div class="no-selection">
+      <i class="pi pi-comments welcome-icon"></i>
+      <h2>Select a conversation to start chatting</h2>
+      <p>Search for people on the left to begin a new message.</p>
+    </div>
+  </ng-template>
+
+  <!-- Room Info Dialog: PREMIUM REDESIGN -->
+  <p-dialog [(visible)]="displayRoomInfo" [modal]="true" [style]="{width: '620px'}" 
+            styleClass="info-dialog-global" [draggable]="false" [resizable]="false" [showHeader]="false">
+    <div class="room-info-content" *ngIf="selectedRoom">
+      <!-- Close Button (Top Right) -->
+      <button class="mock-close-btn" (click)="displayRoomInfo = false">
+        <div class="close-dot"></div>
+      </button>
+
+      <div class="hero-mock flex align-items-center justify-content-between mb-5">
+        <div class="flex align-items-center gap-4">
+          <p-avatar [image]="'https://api.dicebear.com/7.x/initials/svg?seed=' + selectedRoom.roomName" 
+                    shape="circle" size="xlarge" styleClass="community-avatar-list premium-border-mock"></p-avatar>
+          <div class="hero-info">
+            <h1 class="mock-title m-0">{{selectedRoom.roomName}}</h1>
+            <div class="mock-tag mt-2">
+              <i class="pi pi-globe mr-2"></i>
+              <span>{{selectedRoom.roomType | uppercase}} COMMUNITY</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions-admin" *ngIf="isAdmin && !isEditingRoom">
+          <p-button icon="pi pi-pencil" (click)="editRoom()" styleClass="p-button-rounded p-button-text p-button-secondary"></p-button>
+        </div>
+      </div>
+
+      <!-- EDIT MODE: Room Details -->
+      <div class="section-mock mb-5 pb-2 fade-in" *ngIf="isEditingRoom">
+        <div class="section-header-mock mb-4">
+          <i class="pi pi-pencil"></i>
+          <span>Update Community Details</span>
+        </div>
+        <div class="settings-form px-2">
+          <div class="form-group mb-4">
+            <label>Community Name</label>
+            <div class="input-wrapper">
+              <i class="pi pi-users"></i>
+              <input type="text" pInputText [(ngModel)]="editRoomForm.roomName">
+            </div>
+          </div>
+          <div class="form-group mb-4">
+            <label>Description</label>
+            <div class="input-wrapper">
+              <textarea pInputTextarea [(ngModel)]="editRoomForm.description" rows="3" class="description-textarea"></textarea>
+            </div>
+          </div>
+          <div class="form-group mb-5">
+            <label>Max Members (2-500)</label>
+            <div class="input-wrapper">
+              <i class="pi pi-user-plus"></i>
+              <input type="number" pInputText [(ngModel)]="editRoomForm.maxMembers" min="2" max="500">
+            </div>
+          </div>
+          <div class="flex gap-3 mt-2">
+            <p-button label="Save Changes" icon="pi pi-check" (click)="saveRoomUpdate()" styleClass="glow-button flex-1"></p-button>
+            <p-button label="Cancel" (click)="isEditingRoom = false" styleClass="glow-button-alt flex-1"></p-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Section -->
+      <div class="section-mock mb-5 pb-2" *ngIf="!isEditingRoom">
+        <div class="section-header-mock mb-3">
+          <i class="pi pi-info-circle"></i>
+          <span>About this Community</span>
+        </div>
+        <p class="section-desc-mock px-2">
+          {{selectedRoom.description || 'Welcome to our community! Join the conversation and connect with others.'}}
+        </p>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row-mock mb-5" *ngIf="!isEditingRoom">
+        <div class="stat-card-mock">
+          <div class="stat-icon-wrapper members">
+            <i class="pi pi-users"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Members</span>
+            <span class="stat-value"><strong>{{roomMembers.length}}</strong> / {{selectedRoom.maxMembers}}</span>
+          </div>
+        </div>
+        <div class="stat-card-mock">
+          <div class="stat-icon-wrapper visibility">
+            <i class="pi pi-globe"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Visibility</span>
+            <span class="stat-value primary">{{selectedRoom.roomType | uppercase}}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Members List -->
+      <div class="section-mock mb-5 pb-2">
+        <div class="section-header-mock mb-3">
+          <i class="pi pi-users"></i>
+          <span>Active Members</span>
+        </div>
+        <div class="members-container-mock">
+          <div *ngFor="let member of roomMembers" class="member-row-mock">
+            <div class="flex align-items-center gap-3">
+              <div class="avatar-status-wrapper">
+                <p-avatar [image]="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + member.username" 
+                          shape="circle" size="normal"></p-avatar>
+                <div class="status-dot-mock"></div>
+              </div>
+              <div class="member-info-mock">
+                <span class="member-name-text">{{member.displayName || member.username}}</span>
+                <span class="member-role-label" [class.admin-role]="member.role === 'ADMIN'">
+                  {{member.role | titlecase}}
+                </span>
+              </div>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <div *ngIf="isAdmin && member.userId !== currentUser.id" class="flex align-items-center gap-1">
+                <p-dropdown [options]="availableRoles" [(ngModel)]="member.role" 
+                            (onChange)="changeMemberRole(member, $event.value)"
+                            styleClass="p-inputtext-sm role-dropdown-compact" 
+                            appendTo="body"></p-dropdown>
+                <p-button icon="pi pi-trash" (click)="kickMember(member)" 
+                          styleClass="p-button-rounded p-button-text p-button-danger p-button-sm"></p-button>
+              </div>
+              <div *ngIf="member.role === 'ADMIN'" class="admin-badge-mock" pTooltip="Community Administrator">
+                <i class="pi pi-shield"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tools -->
+      <div class="admin-section-mock mt-4 pt-4" *ngIf="isAdmin">
+        <div class="flex align-items-center justify-content-between mb-4">
+          <div class="section-header-mock m-0">
+            <i class="pi pi-cog"></i>
+            <span>Manage Community</span>
+          </div>
+          <p-button label="Delete Community" (click)="deleteRoom()" 
+                    styleClass="p-button-danger p-button-sm"></p-button>
+        </div>
+        
+        <div class="add-member-bar flex gap-2 px-2">
+          <p-dropdown [options]="allUsers" [(ngModel)]="selectedUserToAdd" 
+                      optionLabel="username" [filter]="true" filterBy="username"
+                      placeholder="Add a new member..." [showClear]="true"
+                      styleClass="w-full mock-dropdown" appendTo="body">
+            <ng-template let-user pTemplate="item">
+              <div class="flex align-items-center gap-2">
+                <p-avatar [image]="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.displayName" shape="circle" size="normal"></p-avatar>
+                <span>{{user.username}}</span>
+              </div>
+            </ng-template>
+          </p-dropdown>
+          <p-button icon="pi pi-user-plus" (click)="addMember()" [disabled]="!selectedUserToAdd" 
+                    styleClass="glow-button p-button-rounded"></p-button>
+        </div>
+      </div>
+    </div>
+  </p-dialog>
+</div>
