@@ -1,0 +1,372 @@
+@use "../../../../assets/styles/variables" as *;
+
+.rooms-container {
+  flex: 1;
+  background: linear-gradient(135deg, rgba($primary-color, 0.12) 0%, rgba($primary-color, 0.05) 100%);
+  padding: 2.5rem !important;
+  animation: fadeIn 0.8s ease-out;
+  overflow: visible;
+
+  @media (max-width: 992px) {
+    padding: 1rem !important;
+  }
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.2rem;
+    
+    ::ng-deep .action-btn-premium {
+      width: 100%;
+    }
+  }
+}
+
+.glass-panel {
+  background: rgba($surface-color, 0.5);
+  backdrop-filter: blur(40px) saturate(200%);
+  border-radius: 40px;
+  border: 1px solid rgba($surface-color, 0.8);
+  box-shadow: 0 40px 120px rgba($primary-color, 0.1);
+  min-height: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem !important;
+
+  @media (max-width: 768px) {
+    padding: 1rem !important;
+    border-radius: 24px;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, $primary-color 0%, darken($primary-color, 25%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900 !important;
+}
+
+.tab-nav-container {
+  background: rgba($surface-color, 0.4);
+  padding: 0.5rem;
+  border-radius: 20px;
+  display: inline-flex;
+  gap: 0.5rem;
+  border: 1px solid rgba($primary-color, 0.1);
+  margin-bottom: 2rem;
+
+  @media (max-width: 576px) {
+    width: 100%;
+    display: flex;
+    .tab-btn { flex: 1; padding: 0.6rem 0.5rem; text-align: center; }
+  }
+}
+
+.tab-btn {
+  padding: 0.6rem 2.2rem;
+  border-radius: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba($primary-color, 0.5);
+  font-size: 0.95rem;
+
+  &.active {
+    background: $primary-color;
+    color: white !important;
+    box-shadow: 0 5px 15px rgba($primary-color, 0.3);
+  }
+}
+
+.room-type-tag {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &.tag-public { background: rgba(34, 197, 94, 0.1); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.2); }
+  &.tag-private { background: rgba(239, 68, 68, 0.1); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.2); }
+}
+
+.members-badge {
+  background: rgba($primary-color, 0.05);
+  color: $primary-color;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+::ng-deep {
+  .p-datatable-custom {
+    .p-datatable-thead > tr > th {
+      background: rgba($surface-color, 0.3) !important;
+      color: $primary-color;
+      font-weight: 800;
+      padding: 1.1rem;
+      border: none;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+
+      &.col-community { width: 30%; }
+      &.col-desc { width: 35%; }
+      &.col-capacity { width: 15%; }
+      &.col-type { width: 10%; }
+      &.col-action { width: 10%; }
+
+      @media (max-width: 992px) {
+        &.col-desc { display: none !important; }
+        &.col-community { width: 45%; }
+        &.col-capacity { width: 20%; }
+        &.col-type { width: 15%; }
+        &.col-action { width: 20%; }
+      }
+
+      @media (max-width: 576px) {
+        &.col-type { display: none !important; }
+        &.col-community { width: 60%; }
+        &.col-capacity { width: 20%; }
+        &.col-action { width: 20%; }
+      }
+    }
+    .p-datatable-tbody > tr {
+      background: transparent !important;
+      td { 
+        padding: 1.1rem; 
+        border-color: rgba($primary-color, 0.03); 
+        
+        &.col-desc {
+          @media (max-width: 992px) { display: none !important; }
+        }
+      }
+      &:hover { background: rgba(255, 255, 255, 0.4) !important; }
+    }
+  }
+
+  .btn-tag-style {
+    background: rgba(34, 197, 94, 0.1) !important;
+    color: #15803d !important;
+    border: 1px solid rgba(34, 197, 94, 0.2) !important;
+    font-weight: 900 !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.4rem 1.2rem !important;
+    transition: all 0.3s ease !important;
+
+    ::ng-deep .p-button-icon { font-size: 0.8rem !important; }
+
+    &:hover { 
+      background: #16a34a !important; 
+      color: white !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2) !important;
+    }
+  }
+
+  .action-btn-premium {
+    background: linear-gradient(135deg, lighten($primary-color, 8%) 0%, $primary-color 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 20px -5px rgba($primary-color, 0.3) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-transform: none !important;
+    letter-spacing: 0.3px !important;
+
+    &:hover { 
+      transform: translateY(-2px); 
+      background: linear-gradient(135deg, lighten($primary-color, 12%) 0%, lighten($primary-color, 2%) 100%) !important;
+      box-shadow: 0 12px 25px -5px rgba($primary-color, 0.4) !important;
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  // TRULY PROFESSIONAL DIALOG
+  .custom-dialog {
+    .p-dialog-header {
+      background: rgba($surface-color, 0.8) !important;
+      backdrop-filter: blur(20px);
+      padding: 2rem 2.5rem 1rem !important;
+      border-radius: 35px 35px 0 0 !important;
+      border: none !important;
+      
+      .p-dialog-title {
+        font-weight: 900 !important;
+        font-size: 1.5rem !important;
+        color: $primary-color !important;
+        letter-spacing: -1px;
+      }
+
+      .p-dialog-header-icons .p-dialog-header-close {
+        width: 2.5rem;
+        height: 2.5rem;
+        background: rgba($primary-color, 0.05) !important;
+        color: $primary-color !important;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        &:hover { background: $primary-color !important; color: white !important; transform: rotate(90deg); }
+      }
+    }
+
+    .p-dialog-content {
+      background: rgba($surface-color, 0.8) !important;
+      backdrop-filter: blur(20px);
+      padding: 1rem 2.5rem 2rem !important;
+      border: none !important;
+    }
+
+    .p-dialog-footer {
+      background: rgba($surface-color, 0.8) !important;
+      backdrop-filter: blur(20px);
+      padding: 0 2.5rem 2.5rem !important;
+      border-radius: 0 0 35px 35px !important;
+      border: none !important;
+    }
+
+    .glass-input, .p-inputtext, .p-inputtextarea, .p-dropdown, .p-inputnumber-input {
+      background: rgba(255, 255, 255, 0.4) !important;
+      border: 2px solid rgba($primary-color, 0.1) !important;
+      border-radius: 16px !important;
+      padding: 0.9rem 1.2rem !important;
+      font-size: 1rem !important;
+      color: $text-primary !important;
+      transition: all 0.3s ease !important;
+      box-shadow: none !important;
+
+      &:focus {
+        background: white !important;
+        border-color: $primary-color !important;
+        box-shadow: 0 8px 20px rgba($primary-color, 0.1) !important;
+      }
+    }
+
+    .p-dropdown {
+      padding: 0 !important;
+      .p-dropdown-label { padding: 0.9rem 1.2rem !important; background: transparent !important; }
+      .p-dropdown-trigger { color: $primary-color; }
+    }
+
+    .p-dropdown-panel {
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba($primary-color, 0.1);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+      
+      .p-dropdown-items .p-dropdown-item {
+        padding: 1rem 1.5rem !important;
+        font-weight: 600;
+        &.p-highlight { background: rgba($primary-color, 0.1); color: $primary-color; }
+      }
+    }
+
+    label {
+      color: rgba($primary-color, 0.6) !important;
+      font-weight: 800 !important;
+      font-size: 0.85rem !important;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.8rem !important;
+      display: block;
+    }
+  }
+}
+
+.community-card {
+  background: rgba($surface-color, 0.85);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 2rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba($primary-color, 0.03);
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 70px rgba($primary-color, 0.1);
+    border-color: rgba($primary-color, 0.15);
+  }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .room-name { font-size: 1.4rem; font-weight: 900; color: $text-primary; margin-bottom: 0.6rem; letter-spacing: -0.5px; }
+  .room-desc { color: rgba($text-primary, 0.5); font-size: 0.92rem; line-height: 1.6; flex: 1; margin-bottom: 1.5rem; }
+  
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba($primary-color, 0.05);
+
+    .member-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      color: rgba($primary-color, 0.5);
+    }
+
+    .chat-btn-modern {
+      background: linear-gradient(135deg, lighten($primary-color, 8%) 0%, $primary-color 100%);
+      color: white;
+      padding: 0.8rem 2.2rem;
+      border-radius: 16px;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 6px 15px rgba($primary-color, 0.2);
+
+      &:hover { 
+        background: linear-gradient(135deg, lighten($primary-color, 12%) 0%, lighten($primary-color, 2%) 100%);
+        transform: translateY(-3px) scale(1.03); 
+        box-shadow: 0 12px 25px rgba($primary-color, 0.3);
+      }
+    }
+  }
+}
+
+::ng-deep {
+  .community-avatar-list {
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    
+    img {
+      border-radius: 50% !important;
+      object-fit: cover;
+    }
+  }
+  // PROFESSIONAL OVERLAY
+  .p-component-overlay {
+    background-color: rgba($primary-color, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+  }
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

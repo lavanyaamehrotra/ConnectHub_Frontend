@@ -1,0 +1,77 @@
+<p-toast></p-toast>
+
+<div class="settings-wrapper fade-in">
+  <!-- PAGE HEADER -->
+  <div class="settings-header">
+    <h1 class="glow-text">Notifications</h1>
+    <p>Stay updated with your latest activities</p>
+  </div>
+
+  <div class="settings-content">
+    <!-- ACTIONS BAR -->
+    <div class="glass-card actions-card">
+      <div class="header-actions">
+        <p-button label="Refresh" 
+                  icon="pi pi-refresh" 
+                  [loading]="loading" 
+                  (onClick)="loadNotifications()" 
+                  styleClass="p-button-rounded p-button-text refresh-btn">
+        </p-button>
+        <p-button *ngIf="notifications.length > 0"
+                  label="Mark All Read" 
+                  icon="pi pi-check-circle" 
+                  (onClick)="markAllRead()" 
+                  styleClass="p-button-rounded p-button-text clear-btn">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION LIST -->
+    <div class="notification-list" *ngIf="notifications.length > 0; else emptyState">
+      <div *ngFor="let n of notifications" 
+           class="glass-card notification-item"
+           [class.unread]="!n.isRead"
+           (click)="markRead(n)">
+        
+        <div class="card-status-indicator" *ngIf="!n.isRead"></div>
+
+        <div class="icon-section" [class]="n.type.toLowerCase()">
+          <div class="icon-orb">
+            <i [class]="getIcon(n.type)"></i>
+          </div>
+        </div>
+
+        <div class="text-section">
+          <div class="n-meta">
+            <span class="n-type-label">{{ n.type }}</span>
+            <span class="n-time">{{ n.sentAt | date:'MMM d, h:mm a' }}</span>
+          </div>
+          <h3 class="n-title">{{ n.title }}</h3>
+          <p class="n-message">{{ n.message }}</p>
+        </div>
+
+        <div class="action-section">
+          <button class="delete-btn" (click)="$event.stopPropagation(); deleteNotification(n.notificationId)">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <ng-template #emptyState>
+      <div class="empty-state-card glass-card">
+        <div class="empty-icon-wrapper">
+          <i class="pi pi-bell-slash"></i>
+        </div>
+        <h2>All Caught Up!</h2>
+        <p>You have no new notifications at the moment.</p>
+        <p-button label="Check for Updates" 
+                  icon="pi pi-refresh" 
+                  (onClick)="loadNotifications()" 
+                  styleClass="p-button-rounded glow-button mt-4">
+        </p-button>
+      </div>
+    </ng-template>
+  </div>
+</div>
