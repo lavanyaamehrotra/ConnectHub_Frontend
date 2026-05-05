@@ -207,6 +207,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
             isOnline: false
           };
           this.users = [newUser, ...this.users];
+          this.applyOnlineStatus();
           this.enrichUnknownUsers();
         }
         this.deduplicateSidebar();
@@ -511,7 +512,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   enrichUnknownUsers(): void {
     const unknownUserIds = this.users
-      .filter(u => u.displayName === 'Unknown User' && u.id)
+      .filter(u => (u.displayName === 'Unknown User' || u.displayName === 'New Chat') && u.id)
       .map(u => u.id);
     if (unknownUserIds.length > 0) {
       this.userService.getUsersByIds(unknownUserIds).subscribe({

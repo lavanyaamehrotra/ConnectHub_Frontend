@@ -12,7 +12,25 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<any>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    this.initSession();
+  }
+
+  /**
+   * HYBRID SESSION LOGIC:
+   * 1. Uses localStorage so multiple tabs share the same login.
+   * 2. Uses sessionStorage to detect if the browser was closed.
+   * 3. If sessionStorage is empty on startup, it means a fresh browser session,
+   *    so we clear localStorage to force a logout as requested.
+   */
+  private initSession() {
+    const isSessionActive = sessionStorage.getItem('session_active');
+    if (!isSessionActive) {
+      // Fresh browser session (not just a tab refresh)
+      this.clearLocalData();
+      sessionStorage.setItem('session_active', 'true');
+    }
+  }
 
   private getUserFromStorage(): any {
     const userStr = localStorage.getItem('user');
