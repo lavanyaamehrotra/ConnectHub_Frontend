@@ -66,13 +66,22 @@ export class SettingsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.currentUser = this.authService.getUser();
-    if (this.currentUser) {
-      this.profileForm.patchValue({
-        displayName: this.currentUser.displayName || this.currentUser.username,
-        bio: this.currentUser.bio || ''
-      });
-    }
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.currentUser = {
+          ...user,
+          id: user.id || user.userId || user.UserId,
+          displayName: user.displayName || user.DisplayName || user.username || user.Username,
+          avatarUrl: user.avatarUrl || user.AvatarUrl,
+          username: user.username || user.Username,
+          bio: user.bio || user.Bio || ''
+        };
+        this.profileForm.patchValue({
+          displayName: this.currentUser.displayName,
+          bio: this.currentUser.bio
+        });
+      }
+    });
   }
 
   passwordMatchValidator(g: FormGroup) {
@@ -115,8 +124,14 @@ export class SettingsComponent implements OnInit {
 
   private transformUrl(url: string): string {
     if (!url) return '';
-    return url.replace(/azurite:10000/g, '127.0.0.1:10000')
-              .replace(/localhost:10000/g, '127.0.0.1:10000');
+    let fixedUrl = url;
+    fixedUrl = fixedUrl.replace(/azurite:10000/gi, 'localhost:10000');
+    fixedUrl = fixedUrl.replace(/127\.0\.0\.1:10000/gi, 'localhost:10000');
+    fixedUrl = fixedUrl.replace(/host\.docker\.internal:10000/gi, 'localhost:10000');
+    if (fixedUrl.includes('localhost:10000') && !fixedUrl.includes('devstoreaccount1')) {
+      fixedUrl = fixedUrl.replace('localhost:10000/', 'localhost:10000/devstoreaccount1/');
+    }
+    return fixedUrl;
   }
 
   updateProfile() {

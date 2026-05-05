@@ -21,7 +21,10 @@ import { TransformMediaUrlPipe } from '../../shared/pipes/transform-media-url.pi
       <div class="header-right">
         <div class="profile-dropdown-container">
           <div class="user-profile">
-            <p-avatar [image]="avatarUrl | transformMediaUrl" shape="circle" size="large"></p-avatar>
+            <p-avatar [image]="transformedAvatarUrl" 
+                      [label]="!transformedAvatarUrl ? userName?.charAt(0) : ''"
+                      (onImageError)="transformedAvatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + userName"
+                      shape="circle" size="large"></p-avatar>
             <div class="user-info">
               <span class="user-name">{{ userName }}</span>
               <span class="user-role">Online <i class="pi pi-chevron-down ml-1" style="font-size: 0.7rem"></i></span>
@@ -242,6 +245,7 @@ export class HeaderComponent implements OnInit {
   userName = 'Welcome User';
   userEmail = '';
   avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix';
+  transformedAvatarUrl = '';
   pageTitle = 'Dashboard';
 
   constructor(private router: Router, private authService: AuthService) {
@@ -253,12 +257,27 @@ export class HeaderComponent implements OnInit {
   ngOnInit(): void {
     this.authService.currentUser$.subscribe(user => {
       if (user) {
-        this.userName = user.displayName || user.username || user.email;
-        this.userEmail = user.email || '';
-        this.avatarUrl = user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username || 'User'}`;
+        this.userName = user.displayName || user.DisplayName || user.username || user.Username || user.email || user.Email || 'User';
+        this.userEmail = user.email || user.Email || '';
+        const rawAvatar = user.avatarUrl || user.AvatarUrl;
+        const seed = user.username || user.Username || user.displayName || user.DisplayName || 'User';
+        this.avatarUrl = rawAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+        this.transformedAvatarUrl = this.transformUrl(this.avatarUrl);
       }
     });
     this.updatePageTitle();
+  }
+
+  transformUrl(url: string): string {
+    if (!url) return '';
+    let fixedUrl = url;
+    fixedUrl = fixedUrl.replace(/azurite:10000/gi, 'localhost:10000');
+    fixedUrl = fixedUrl.replace(/127\.0\.0\.1:10000/gi, 'localhost:10000');
+    fixedUrl = fixedUrl.replace(/host\.docker\.internal:10000/gi, 'localhost:10000');
+    if (fixedUrl.includes('localhost:10000') && !fixedUrl.includes('devstoreaccount1')) {
+      fixedUrl = fixedUrl.replace('localhost:10000/', 'localhost:10000/devstoreaccount1/');
+    }
+    return fixedUrl;
   }
 
   onToggleSidebar(event: Event) {

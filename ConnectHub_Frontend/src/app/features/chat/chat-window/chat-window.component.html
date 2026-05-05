@@ -41,7 +41,9 @@
                [class.active]="selectedUser?.id === user.id"
                (click)="selectUser(user)">
             <div class="avatar-container">
-              <p-avatar [image]="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.displayName" 
+              <p-avatar [image]="user.avatarUrl || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.displayName)" 
+                        [label]="!user.avatarUrl && !user.displayName ? '?' : ''"
+                        (onImageError)="user.avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.displayName"
                         shape="circle" size="large"></p-avatar>
               <div class="status-indicator" [class.online]="user.isOnline"></div>
             </div>
@@ -69,7 +71,8 @@
           <i class="pi pi-arrow-left"></i>
           <span>Back</span>
         </button>
-        <p-avatar [image]="selectedUser ? ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedUser.displayName) : ('https://api.dicebear.com/7.x/initials/svg?seed=' + selectedRoom.roomName)" 
+        <p-avatar [image]="selectedUser ? (selectedUser.avatarUrl || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedUser.displayName)) : ('https://api.dicebear.com/7.x/initials/svg?seed=' + selectedRoom.roomName)" 
+                  (onImageError)="selectedUser ? selectedUser.avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedUser.displayName : null"
                   shape="circle" size="large" styleClass="community-avatar-list"></p-avatar>
         <div class="header-details">
           <div class="header-name">{{ selectedUser ? selectedUser.displayName : selectedRoom.roomName }}</div>

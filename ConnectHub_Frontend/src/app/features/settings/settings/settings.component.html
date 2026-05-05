@@ -21,7 +21,9 @@
 
       <div class="avatar-upload-container">
         <div class="avatar-preview-wrapper" (click)="fileInput.click()" pTooltip="Change Profile Picture" tooltipPosition="bottom">
-          <p-avatar [image]="(currentUser?.avatarUrl | transformMediaUrl) || ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + currentUser?.username)" 
+          <p-avatar [image]="currentUser?.avatarUrl ? (currentUser.avatarUrl | transformMediaUrl) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' + currentUser?.displayName)" 
+                    [label]="!currentUser?.avatarUrl && !currentUser?.displayName ? '?' : ''"
+                    (onImageError)="currentUser.avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + currentUser?.displayName"
                     size="xlarge" shape="circle" styleClass="settings-avatar"></p-avatar>
           <div class="upload-overlay" [class.loading]="loadingAvatar">
             <i [class]="loadingAvatar ? 'pi pi-spin pi-spinner' : 'pi pi-camera'"></i>

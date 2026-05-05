@@ -134,9 +134,16 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getUser();
-    if (this.currentUser && this.currentUser.userId) {
-      this.currentUser.id = this.currentUser.userId;
-    }
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.currentUser = {
+          ...user,
+          id: user.id || user.userId || user.UserId,
+          displayName: user.displayName || user.DisplayName,
+          avatarUrl: user.avatarUrl || user.AvatarUrl
+        };
+      }
+    });
     this.loadRecentChats();
     this.loadMyRooms();
 
@@ -158,18 +165,23 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.signalrService.messageReceived$.subscribe(msg => {
         if (!msg) return;
+        const msgId = (msg.messageId || msg.MessageId)?.toString().toLowerCase();
         const senderId = (msg.senderId || msg.SenderId)?.toString().toLowerCase();
         const receiverId = (msg.receiverId || msg.ReceiverId)?.toString().toLowerCase();
         const currentUserId = this.currentUser.id?.toString().toLowerCase();
         const selectedId = this.selectedUser?.id?.toString().toLowerCase();
         
+        // 1. If this message belongs to the current open chat, add it to the window
         if (this.selectedUser && (senderId === selectedId || receiverId === selectedId)) {
-          msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
-          this.messages.push(msg);
-          this.scrollToBottom();
+          const exists = this.messages.some(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === msgId);
+          if (!exists) {
+            msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
+            this.messages.push(msg);
+            this.scrollToBottom();
 
-          if (senderId === selectedId) {
-            this.signalrService.markMessageAsRead(msg.messageId || msg.MessageId, msg.senderId || msg.SenderId);
+            if (senderId === selectedId) {
+              this.signalrService.markMessageAsRead(msg.messageId || msg.MessageId, msg.senderId || msg.SenderId);
+            }
           }
         }
 
@@ -204,13 +216,17 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.signalrService.messageSent$.subscribe(msg => {
         if (msg && this.selectedUser) {
+          const msgId = (msg.messageId || msg.MessageId)?.toString().toLowerCase();
           const receiverId = (msg.receiverId || msg.ReceiverId)?.toString().toLowerCase();
           const selectedId = this.selectedUser.id?.toString().toLowerCase();
           
           if (receiverId === selectedId) {
-            msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
-            this.messages.push(msg);
-            this.scrollToBottom();
+            const exists = this.messages.some(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === msgId);
+            if (!exists) {
+              msg.mediaUrl = this.transformUrl(msg.mediaUrl || msg.MediaUrl);
+              this.messages.push(msg);
+              this.scrollToBottom();
+            }
           }
           const sidebarUser = this.users.find(u => u.id?.toString().toLowerCase() === selectedId);
           if (sidebarUser) {
@@ -479,12 +495,13 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   loadRecentChats(): void {
     this.messageService.getRecentChats().subscribe((chats: any) => {
       this.users = chats.map((c: any) => ({
-        id: c.userId,
-        displayName: c.displayName || c.username || 'Unknown User',
-        lastMessage: c.lastMessage?.content,
-        lastMessageTime: c.lastMessage?.sentAt,
-        isOnline: false,
-        unreadCount: c.unreadCount || 0
+        id: c.userId || c.UserId,
+        displayName: c.displayName || c.DisplayName || c.username || c.Username || 'Unknown User',
+        avatarUrl: this.transformUrl(c.avatarUrl || c.AvatarUrl),
+        lastMessage: c.lastMessage?.content || c.LastMessage?.content,
+        lastMessageTime: c.lastMessage?.sentAt || c.LastMessage?.sentAt,
+        isOnline: c.isOnline || c.IsOnline || false,
+        unreadCount: c.unreadCount || c.UnreadCount || 0
       }));
       this.enrichUnknownUsers();
       this.applyOnlineStatus();
@@ -502,8 +519,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
           usersInfo.forEach(ui => {
             const user = this.users.find(u => u.id?.toString().toLowerCase() === ui.userId?.toString().toLowerCase());
             if (user) {
-              user.displayName = ui.displayName || ui.username || 'Unknown User';
-              user.avatarUrl = ui.avatarUrl;
+              user.displayName = ui.displayName || ui.DisplayName || ui.username || ui.Username || 'Unknown User';
+              user.avatarUrl = this.transformUrl(ui.avatarUrl || ui.AvatarUrl);
             }
           });
         }
@@ -547,10 +564,11 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     }
     this.userService.searchUsers(this.searchQuery).subscribe((res: any) => {
       const usersList = Array.isArray(res) ? res : (res?.users || []);
-      this.users = usersList.filter((u: any) => u.userId !== this.currentUser.id).map((u: any) => ({
-        id: u.userId,
-        displayName: u.displayName || u.username,
-        isOnline: false,
+      this.users = usersList.filter((u: any) => (u.userId || u.UserId) !== this.currentUser.id).map((u: any) => ({
+        id: u.userId || u.UserId,
+        displayName: u.displayName || u.DisplayName || u.username || u.Username,
+        avatarUrl: this.transformUrl(u.avatarUrl || u.AvatarUrl),
+        isOnline: u.isOnline || u.IsOnline || false,
         lastMessage: 'Start a conversation'
       }));
     });
@@ -611,7 +629,10 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
         next: (usersInfo: any[]) => {
           usersInfo.forEach(ui => {
             const member = this.roomMembers.find(m => m.userId?.toString().toLowerCase() === ui.userId?.toString().toLowerCase());
-            if (member) member.displayName = ui.displayName || ui.username;
+            if (member) {
+              member.displayName = ui.displayName || ui.DisplayName || ui.username || ui.Username;
+              member.avatarUrl = this.transformUrl(ui.avatarUrl || ui.AvatarUrl);
+            }
           });
         }
       });
@@ -700,7 +721,11 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       this.messages = msgs.map((m: any) => ({
         ...m,
         mediaUrl: this.transformUrl(m.mediaUrl || m.MediaUrl)
-      })).reverse();
+      })).sort((a: any, b: any) => {
+        const timeA = new Date(a.sentAt || a.SentAt || 0).getTime();
+        const timeB = new Date(b.sentAt || b.SentAt || 0).getTime();
+        return timeA - timeB;
+      });
       this.scrollToBottom();
       
       if (this.messages.length > 0) {
@@ -728,7 +753,11 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       this.messages = msgs.map((m: any) => ({
         ...m,
         mediaUrl: this.transformUrl(m.mediaUrl || m.MediaUrl)
-      })).reverse();
+      })).sort((a: any, b: any) => {
+        const timeA = new Date(a.sentAt || a.SentAt || 0).getTime();
+        const timeB = new Date(b.sentAt || b.SentAt || 0).getTime();
+        return timeA - timeB;
+      });
       this.scrollToBottom();
       this.signalrService.markAllAsRead(this.selectedUser.id);
     });

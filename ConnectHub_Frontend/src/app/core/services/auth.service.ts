@@ -48,6 +48,7 @@ export class AuthService {
         if (res.token) {
           localStorage.setItem('token', res.token);
           localStorage.setItem('user', JSON.stringify(res.user));
+          this.currentUserSubject.next(res.user);
         }
       })
     );
@@ -67,6 +68,7 @@ export class AuthService {
         if (res.token) {
           localStorage.setItem('token', res.token);
           localStorage.setItem('user', JSON.stringify(res.user));
+          this.currentUserSubject.next(res.user);
         }
       })
     );
