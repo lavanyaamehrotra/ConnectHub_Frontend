@@ -40,31 +40,38 @@ console.log(`- API_URL: ${apiUrl}`);
 console.log(`- HUB_URL: ${hubUrl}`);
 console.log(`- GOOGLE_CLIENT_ID: ${googleClientId ? googleClientId.substring(0, 5) + '...' : 'MISSING'}`);
 
-// Read environment.ts
-if (!fs.existsSync(targetPath)) {
-  console.error(' Error: Frontend environment.ts not found.');
-  process.exit(1);
-}
+// List of target files
+const targetFiles = [
+  path.resolve(__dirname, '../src/environments/environment.ts'),
+  path.resolve(__dirname, '../src/environments/environment.prod.ts')
+];
 
-let environmentContent = fs.readFileSync(targetPath, 'utf8');
+targetFiles.forEach(targetPath => {
+  if (!fs.existsSync(targetPath)) {
+    console.warn(` Info: Skipping missing file: ${path.basename(targetPath)}`);
+    return;
+  }
 
-// Replace Values
-let updatedContent = environmentContent.replace(
-  /apiUrl:\s*'.*'/g,
-  `apiUrl: '${apiUrl}'`
-);
-updatedContent = updatedContent.replace(
-  /hubUrl:\s*'.*'/g,
-  `hubUrl: '${hubUrl}'`
-);
-updatedContent = updatedContent.replace(
-  /googleClientId:\s*'.*'/g,
-  `googleClientId: '${googleClientId}'`
-);
+  let environmentContent = fs.readFileSync(targetPath, 'utf8');
 
-if (environmentContent !== updatedContent) {
-  fs.writeFileSync(targetPath, updatedContent, 'utf8');
-  console.log(' Success: environment.ts synchronized!');
-} else {
-  console.log(' Info: environment.ts is already up to date.');
-}
+  // Replace Values
+  let updatedContent = environmentContent.replace(
+    /apiUrl:\s*'.*'/g,
+    `apiUrl: '${apiUrl}'`
+  );
+  updatedContent = updatedContent.replace(
+    /hubUrl:\s*'.*'/g,
+    `hubUrl: '${hubUrl}'`
+  );
+  updatedContent = updatedContent.replace(
+    /googleClientId:\s*'.*'/g,
+    `googleClientId: '${googleClientId}'`
+  );
+
+  if (environmentContent !== updatedContent) {
+    fs.writeFileSync(targetPath, updatedContent, 'utf8');
+    console.log(` Success: ${path.basename(targetPath)} synchronized!`);
+  } else {
+    console.log(` Info: ${path.basename(targetPath)} is already up to date.`);
+  }
+});
