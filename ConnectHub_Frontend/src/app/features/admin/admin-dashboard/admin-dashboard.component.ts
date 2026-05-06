@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../../core/services/admin.service';
@@ -13,6 +13,7 @@ import { BadgeModule } from 'primeng/badge';
 import { ToastModule } from 'primeng/toast';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -384,14 +385,15 @@ import { TooltipModule } from 'primeng/tooltip';
     }
   `]
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   users: any[] = [];
   onlineCount = 0;
   broadcastTitle = '';
   broadcastMessage = '';
   sendingBroadcast = false;
   isRefreshing = false;
-  private presenceSubscription: any;
+  private presenceSubscription: Subscription | undefined;
+  private lastReceivedPresence: any = null;
 
   constructor(
     private adminService: AdminService,
@@ -412,61 +414,101 @@ export class AdminDashboardComponent implements OnInit {
 
   setupPresenceListener() {
     this.presenceSubscription = this.signalrService.userPresence$.subscribe((presence: any) => {
-      if (presence.isBulk) {
-        // Bulk update from OnlineUsers event
-        const onlineSet = new Set((presence.userIds as string[]).map(id => id.toLowerCase()));
-        this.users.forEach(u => {
-          const isOnline = onlineSet.has(u.userId?.toLowerCase());
-          if (u.isOnline !== undefined) u.isOnline = isOnline;
-          if (u.IsOnline !== undefined) u.IsOnline = isOnline;
-        });
-      } else {
-        // Individual update
-        const presenceId = presence.userId?.toLowerCase();
-        const user = this.users.find(u => u.userId?.toLowerCase() === presenceId);
+      if (!presence) return;
+      
+      console.log('Admin Dashboard: Presence update received', presence.isBulk ? 'Bulk' : 'Single');
+      this.lastReceivedPresence = presence;
+
+      // If users aren't loaded yet, we'll apply this later in loadUsers()
+      if (this.users.length > 0) {
+        this.applyPresenceUpdate(presence);
+      }
+    });
+  }
+
+  private applyPresenceUpdate(presence: any) {
+    if (presence.isBulk) {
+      // Bulk update from OnlineUsers event
+      const onlineIds = (presence.userIds as string[] || []).map(id => id.toLowerCase());
+      const onlineSet = new Set(onlineIds);
+      
+      this.users.forEach(u => {
+        const uid = (u.userId || u.UserId || u.id || '')?.toString().toLowerCase();
+        if (uid) {
+          const isOnline = onlineSet.has(uid);
+          this.updateUserPresence(u, isOnline);
+        }
+      });
+    } else {
+      // Individual update
+      const presenceId = (presence.userId || '')?.toString().toLowerCase();
+      if (presenceId) {
+        const user = this.users.find(u => 
+          (u.userId || u.UserId || u.id || '')?.toString().toLowerCase() === presenceId
+        );
         if (user) {
-          if (user.isOnline !== undefined) user.isOnline = presence.isOnline;
-          if (user.IsOnline !== undefined) user.IsOnline = presence.isOnline;
+          this.updateUserPresence(user, presence.isOnline);
         }
       }
-      this.calculateOnlineCount();
-    });
+    }
+    this.calculateOnlineCount();
+  }
+
+  private updateUserPresence(user: any, isOnline: boolean) {
+    user.isOnline = isOnline;
+    user.IsOnline = isOnline;
   }
 
   loadUsers() {
     this.isRefreshing = true;
     console.log('Admin Dashboard: Refreshing user list...');
     
-    // Artificial delay to show the beautiful rotation animation
-    setTimeout(() => {
-      this.adminService.getAllUsers().subscribe({
-        next: (data) => {
-          this.users = data;
-          this.signalrService.requestOnlineUsers(); // Force real-time refresh
-          this.calculateOnlineCount();
-          this.isRefreshing = false;
-          this.showToast('success', 'Refreshed', 'User list and presence updated');
-        },
-        error: (err) => {
-          this.isRefreshing = false;
-          console.error('Admin Dashboard: Failed to load users:', err);
-          this.showToast('error', 'Error', 'Failed to load users');
+    this.adminService.getAllUsers().subscribe({
+      next: (data) => {
+        // Map users and preserve current online status if we have it from DB
+        this.users = (data || []).map(u => ({ 
+          ...u, 
+          isOnline: u.isOnline || u.IsOnline || false, 
+          IsOnline: u.isOnline || u.IsOnline || false 
+        }));
+        
+        // If we have a buffered SignalR presence update, apply it now (it's more accurate than DB)
+        if (this.lastReceivedPresence) {
+          console.log('Admin Dashboard: Applying buffered presence update to new user list');
+          this.applyPresenceUpdate(this.lastReceivedPresence);
         }
-      });
-    }, 600);
+        
+        // Request fresh list from Hub just in case
+        this.signalrService.requestOnlineUsers().then(() => {
+          console.log('Admin Dashboard: Fresh presence list requested');
+        }).catch(err => {
+          console.warn('Admin Dashboard: Failed to request presence list:', err);
+        });
+        
+        this.calculateOnlineCount();
+        this.isRefreshing = false;
+        this.showToast('success', 'Refreshed', 'User list updated');
+      },
+      error: (err) => {
+        this.isRefreshing = false;
+        console.error('Admin Dashboard: Failed to load users:', err);
+        this.showToast('error', 'Error', 'Failed to load users');
+      }
+    });
   }
 
   calculateOnlineCount() {
+    // Count users who are currently marked as online
     this.onlineCount = this.users.filter(u => this.isOnline(u)).length;
   }
 
-  // HELPER METHODS to handle case-sensitivity
+  // HELPER METHODS to handle case-sensitivity and different field naming
   getStatus(user: any): boolean {
     return user.isActive === true || user.IsActive === true;
   }
 
   getRole(user: any): string {
-    return user.role || user.Role || '';
+    return user.role || user.Role || 'User';
   }
 
   isOnline(user: any): boolean {
@@ -478,12 +520,13 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   toggleUser(user: any) {
-    this.adminService.toggleUserStatus(user.userId).subscribe({
+    const uid = user.userId || user.UserId || user.id;
+    if (!uid) return;
+
+    this.adminService.toggleUserStatus(uid).subscribe({
       next: (res: any) => {
-        // Toggle both potential properties
         if (user.isActive !== undefined) user.isActive = !user.isActive;
         if (user.IsActive !== undefined) user.IsActive = !user.IsActive;
-        this.calculateOnlineCount();
         this.showToast('success', 'Success', res.message || 'Status updated');
       },
       error: () => this.showToast('error', 'Error', 'Operation failed')
@@ -497,7 +540,7 @@ export class AdminDashboardComponent implements OnInit {
     }
 
     this.sendingBroadcast = true;
-    const recipientIds = this.users.map(u => u.userId);
+    const recipientIds = this.users.map(u => u.userId || u.UserId || u.id).filter(id => !!id);
     
     this.adminService.sendBulkNotification(this.broadcastTitle, this.broadcastMessage, recipientIds).subscribe({
       next: () => {
@@ -507,7 +550,7 @@ export class AdminDashboardComponent implements OnInit {
         this.sendingBroadcast = false;
       },
       error: (err) => {
-        this.showToast('error', 'Error', err.error?.message || 'Failed to send broadcast. Server returned ' + err.status);
+        this.showToast('error', 'Error', err.error?.message || 'Failed to send broadcast');
         this.sendingBroadcast = false;
       }
     });

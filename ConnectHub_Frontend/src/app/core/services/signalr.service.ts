@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
-import { Subject } from 'rxjs';
+import { Subject, ReplaySubject } from 'rxjs';
 import { AuthService } from './auth.service';
 
 @Injectable({
@@ -16,13 +16,14 @@ export class SignalrService {
   public messageEdited$ = new Subject<any>();
   public messageDeleted$ = new Subject<string>();
   public typingIndicator$ = new Subject<any>();
-  public userPresence$ = new Subject<any>();
+  public userPresence$ = new ReplaySubject<any>(1);
   public messageRead$ = new Subject<any>();
   public allMessagesRead$ = new Subject<any>();
   public roomMessageReceived$ = new Subject<any>();
   public roomMessageEdited$ = new Subject<any>();
   public roomMessageDeleted$ = new Subject<string>();
   public roomMessageRead$ = new Subject<any>();
+  public newRoomAdded$ = new Subject<string>();
 
   constructor(private authService: AuthService) {
     // Initialization is handled by LayoutComponent to control lifecycle
@@ -55,11 +56,8 @@ export class SignalrService {
       })
       .catch(err => {
         console.error('SignalR connection failed to start:', err);
-        // Retry logic is already handled by withAutomaticReconnect for transient errors,
-        // but explicit start failures need to be visible.
       });
 
-    // Also emit on reconnect
     this.hubConnection.onreconnected(() => {
       this.connected$.next();
     });
@@ -72,7 +70,6 @@ export class SignalrService {
   }
 
   private registerOnEvents(): void {
-    // DO NOT re-assign the subjects here! Just call .next()
     this.hubConnection?.on('ReceiveMessage', (data) => {
       this.messageReceived$.next(data);
     });
@@ -128,11 +125,18 @@ export class SignalrService {
     this.hubConnection?.on('RoomMessageRead', (data) => {
       this.roomMessageRead$.next(data);
     });
+
+    this.hubConnection?.on('NewRoomAdded', (roomId) => {
+      this.newRoomAdded$.next(roomId);
+    });
   }
 
   public async requestOnlineUsers(): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      console.log('SignalR: Requesting online users list...');
       await this.hubConnection.invoke('RequestOnlineUsers');
+    } else {
+      console.warn(`SignalR: Cannot request online users, connection state is: ${this.hubConnection?.state}`);
     }
   }
 
@@ -142,7 +146,6 @@ export class SignalrService {
       await this.hubConnection?.invoke('SendDirectMessage', receiverId, content);
     } else {
       console.error(`Cannot send message: SignalR is in '${state}' state (not Connected)`);
-      // If we are disconnected, try to restart
       if (state === signalR.HubConnectionState.Disconnected) {
         this.startConnection();
       }

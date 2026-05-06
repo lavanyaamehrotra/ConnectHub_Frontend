@@ -171,7 +171,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
         const currentUserId = this.currentUser.id?.toString().toLowerCase();
         const selectedId = this.selectedUser?.id?.toString().toLowerCase();
         
-        // 1. If this message belongs to the current open chat, add it to the window
         if (this.selectedUser && (senderId === selectedId || receiverId === selectedId)) {
           const exists = this.messages.some(m => (m.messageId || m.MessageId)?.toString().toLowerCase() === msgId);
           if (!exists) {
@@ -241,7 +240,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.signalrService.roomMessageReceived$.subscribe(msg => {
         if (!msg) return;
-        console.log('SignalR: ReceiveRoomMessage', msg);
         const roomId = (msg.roomId || msg.RoomId)?.toString().toLowerCase();
         const currentRoomId = this.selectedRoom?.roomId?.toString().toLowerCase();
         const messageId = msg.messageId || msg.MessageId;
@@ -256,8 +254,19 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
           const senderId = (msg.senderId || msg.SenderId)?.toString().toLowerCase();
           const currentUserId = this.currentUser.id?.toString().toLowerCase();
           if (senderId !== currentUserId) {
-            console.log('Marking room message as read:', messageId);
             this.signalrService.markRoomMessageAsRead(roomId, messageId);
+          }
+        }
+
+        // Update unread count for sidebar community item
+        if (roomId) {
+          const room = this.myRooms.find(r => r.roomId?.toString().toLowerCase() === roomId);
+          if (room) {
+            if (roomId !== currentRoomId) {
+              room.unreadCount = (room.unreadCount || 0) + 1;
+            } else {
+              room.unreadCount = 0;
+            }
           }
         }
       })
@@ -387,7 +396,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
     this.subs.add(
       this.signalrService.roomMessageRead$.subscribe(data => {
-        console.log('SignalR: RoomMessageRead received', data);
         if (!data) return;
         const targetId = (data.messageId || data.MessageId)?.toString().toLowerCase();
         const readTime = data.readAt || data.ReadAt;
@@ -413,6 +421,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       })
     );
 
+    this.subs.add(
+      this.signalrService.newRoomAdded$.subscribe(() => {
+        this.loadMyRooms();
+      })
+    );
+
     this.deleteMenuItems = [
       {
         label: 'Delete for me',
@@ -428,7 +442,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     ];
   }
 
-  // --- UI Helpers ---
   scrollToBottom(): void {
     try {
       setTimeout(() => {
@@ -440,8 +453,6 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   onTyping(): void {
     if (this.selectedUser) {
       this.signalrService.sendTypingIndicator(this.selectedUser.id, true);
-    } else if (this.selectedRoom) {
-      // Need Room Typing implementation in SignalR
     }
   }
 
@@ -531,14 +542,29 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   loadMyRooms(): void {
     this.roomService.getRoomsByUser().subscribe(rooms => {
-      this.myRooms = rooms;
+      this.myRooms = rooms.map(r => ({ ...r, unreadCount: 0 }));
     });
   }
 
   applyOnlineStatus(): void {
+    const onlineSet = this.onlineUserIds;
+    
+    // Update Sidebar List
     this.users.forEach(u => {
-      u.isOnline = this.onlineUserIds.has(u.id?.toString().toLowerCase());
+      u.isOnline = onlineSet.has(u.id?.toString().toLowerCase());
     });
+
+    // Update Currently Selected User (Header)
+    if (this.selectedUser) {
+      this.selectedUser.isOnline = onlineSet.has(this.selectedUser.id?.toString().toLowerCase());
+    }
+
+    // Update Room Members list
+    if (this.roomMembers.length > 0) {
+      this.roomMembers.forEach(m => {
+        m.isOnline = onlineSet.has(m.userId?.toString().toLowerCase());
+      });
+    }
   }
 
   sortUsersByTime(): void {
@@ -569,7 +595,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
         id: u.userId || u.UserId,
         displayName: u.displayName || u.DisplayName || u.username || u.Username,
         avatarUrl: this.transformUrl(u.avatarUrl || u.AvatarUrl),
-        isOnline: u.isOnline || u.IsOnline || false,
+        isOnline: this.onlineUserIds.has((u.userId || u.UserId)?.toString().toLowerCase()),
         lastMessage: 'Start a conversation'
       }));
     });
@@ -606,6 +632,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
   selectRoom(room: any): void {
     this.selectedUser = null;
     this.selectedRoom = room;
+    this.selectedRoom.unreadCount = 0; // Clear unread count on selection
     this.messages = [];
     this.roomMembers = [];
     this.isAdmin = false;
@@ -620,6 +647,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
       this.roomMembers = members;
       this.checkIfAdmin();
       this.enrichRoomMembers();
+      this.applyOnlineStatus(); // Ensure online status is applied immediately to members
     });
   }
 
@@ -633,6 +661,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
             if (member) {
               member.displayName = ui.displayName || ui.DisplayName || ui.username || ui.Username;
               member.avatarUrl = this.transformUrl(ui.avatarUrl || ui.AvatarUrl);
+              member.isOnline = this.onlineUserIds.has(member.userId?.toString().toLowerCase());
             }
           });
         }
@@ -742,6 +771,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
   selectUser(user: any): void {
     this.selectedUser = user;
+    this.selectedUser.isOnline = this.onlineUserIds.has(user.id?.toString().toLowerCase()); // Refresh status on select
     this.selectedRoom = null;
     this.messages = [];
     this.loadConversation();

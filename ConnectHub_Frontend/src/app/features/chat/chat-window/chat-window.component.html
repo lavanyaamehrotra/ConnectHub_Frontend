@@ -28,6 +28,11 @@
               <div class="user-name">{{ room.roomName }}</div>
               <div class="last-msg">{{ room.memberCount }} members</div>
             </div>
+            <div class="time-badge" *ngIf="room.unreadCount > 0">
+              <div class="mt-1 flex justify-content-end">
+                <p-badge [value]="room.unreadCount" severity="danger"></p-badge>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +280,7 @@
               <div class="avatar-status-wrapper">
                 <p-avatar [image]="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + member.username" 
                           shape="circle" size="normal"></p-avatar>
-                <div class="status-dot-mock"></div>
+                <div class="status-dot-mock" [class.online]="member.isOnline"></div>
               </div>
               <div class="member-info-mock">
                 <span class="member-name-text">{{member.displayName || member.username}}</span>

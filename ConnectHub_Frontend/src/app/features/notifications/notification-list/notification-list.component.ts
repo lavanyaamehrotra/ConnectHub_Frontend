@@ -36,46 +36,72 @@ export class NotificationListComponent implements OnInit {
     this.loading = true;
     this.notificationService.getNotifications().subscribe({
       next: (data) => {
-        this.notifications = data.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+        if (data && Array.isArray(data)) {
+          this.notifications = data.sort((a, b) => {
+            const timeA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+            const timeB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+            return timeB - timeA;
+          });
+        } else {
+          this.notifications = [];
+        }
         this.loading = false;
       },
       error: (err) => {
-        this.toastService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load notifications' });
+        console.error('Failed to load notifications:', err);
+        this.toastService.add({ 
+          severity: 'error', 
+          summary: 'Connection Error', 
+          detail: 'Could not fetch notifications. Please try again.' 
+        });
         this.loading = false;
       }
     });
   }
 
   markRead(notification: any): void {
-    if (notification.isRead) return;
-    this.notificationService.markAsRead(notification.notificationId).subscribe(() => {
-      notification.isRead = true;
-      
-      // Sync with chat if it's a message notification
-      if (notification.type.toUpperCase() === 'MESSAGE' && notification.relatedId) {
-        this.chatMessageService.markAsRead(notification.relatedId).subscribe();
-      }
+    if (!notification || notification.isRead) return;
+    this.notificationService.markAsRead(notification.notificationId).subscribe({
+      next: () => {
+        notification.isRead = true;
+        // Sync with chat if it's a message notification
+        if (notification.type && notification.type.toUpperCase() === 'MESSAGE' && notification.relatedId) {
+          this.chatMessageService.markAsRead(notification.relatedId).subscribe({
+            error: (e) => console.warn('Chat sync failed:', e)
+          });
+        }
+      },
+      error: (err) => console.error('Mark read failed:', err)
     });
   }
 
   deleteNotification(id: string): void {
-    this.notificationService.deleteNotification(id).subscribe(() => {
-      this.notifications = this.notifications.filter(n => n.notificationId !== id);
-      this.toastService.add({ severity: 'success', summary: 'Deleted', detail: 'Notification removed' });
+    if (!id) return;
+    this.notificationService.deleteNotification(id).subscribe({
+      next: () => {
+        this.notifications = this.notifications.filter(n => n.notificationId !== id);
+        this.toastService.add({ severity: 'success', summary: 'Deleted', detail: 'Notification removed' });
+      },
+      error: (err) => console.error('Delete failed:', err)
     });
   }
+
   markAllRead(): void {
-    this.notificationService.markAllRead().subscribe(() => {
-      this.notifications.forEach(n => n.isRead = true);
-      
-      // Global sync with chat
-      this.chatMessageService.markAllGlobalAsRead().subscribe();
-      
-      this.toastService.add({ severity: 'success', summary: 'Success', detail: 'All notifications marked as read' });
+    this.notificationService.markAllRead().subscribe({
+      next: () => {
+        this.notifications.forEach(n => n.isRead = true);
+        // Global sync with chat
+        this.chatMessageService.markAllGlobalAsRead().subscribe({
+          error: (e) => console.warn('Global chat sync failed:', e)
+        });
+        this.toastService.add({ severity: 'success', summary: 'Success', detail: 'All notifications marked as read' });
+      },
+      error: (err) => console.error('Mark all read failed:', err)
     });
   }
 
   getIcon(type: string): string {
+    if (!type) return 'pi pi-bell';
     switch (type.toUpperCase()) {
       case 'MESSAGE': return 'pi pi-envelope';
       case 'ROOM_INVITE': return 'pi pi-users';

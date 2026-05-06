@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RoomService, ChatRoom } from '../../../core/services/room.service';
+import { SignalrService } from '../../../core/services/signalr.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -61,7 +62,8 @@ export class RoomListComponent implements OnInit {
   constructor(
     private roomService: RoomService,
     private router: Router,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private signalrService: SignalrService
   ) {}
 
   isMember(roomId: string): boolean {
@@ -70,6 +72,9 @@ export class RoomListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRooms();
+    this.signalrService.newRoomAdded$.subscribe(() => {
+      this.loadRooms();
+    });
   }
 
   loadRooms(): void {
