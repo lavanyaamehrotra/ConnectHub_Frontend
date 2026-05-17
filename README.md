@@ -136,16 +136,16 @@ ConnectHub Frontend follows a **Feature-Based Architecture** with the following 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        Angular App Shell                         │
-│  app.component.ts  →  <router-outlet>                           │
+│  app.component.ts  →  <router-outlet>                            │
 └──────────────────────────────┬───────────────────────────────────┘
                                │
               ┌────────────────┴─────────────────┐
               │                                  │
    ┌──────────▼───────────┐          ┌───────────▼──────────┐
-   │   PUBLIC ROUTES       │          │  PROTECTED ROUTES    │
-   │  /auth/login          │          │  canActivate: Guard  │
-   │  /auth/register       │          │                      │
-   └──────────────────────┘          │  LayoutComponent     │
+   │   PUBLIC ROUTES       │         │  PROTECTED ROUTES    │
+   │  /auth/login          │         │  canActivate: Guard  │
+   │  /auth/register       │         │                      │
+   └────────────────────── ┘         │  LayoutComponent     │
                                      │  ┌────────────────┐  │
                                      │  │   app-header   │  │
                                      │  │   app-sidebar  │  │
@@ -204,11 +204,11 @@ AppComponent
 ### Core Services Diagram
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                       CORE SERVICES LAYER                      │
-│                    (providedIn: 'root')                        │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
+┌───────────────────────────────────────────────────────────────┐
+│                       CORE SERVICES LAYER                     │
+│                    (providedIn: 'root')                       │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
 │  ┌─────────────────┐   ┌──────────────────────────────────┐   │
 │  │   AuthService   │   │         SignalrService           │   │
 │  │                 │   │                                  │   │
@@ -234,12 +234,12 @@ AppComponent
 │           │            │  • roomMessageReceived$          │   │
 │           │            │  • newRoomAdded$                 │   │
 │           │            └──────────────────────────────────┘   │
-│           │                                                    │
+│           │                                                   │
 │  ┌────────▼────────┐   ┌──────────────────────────────────┐   │
 │  │  MessageService │   │          RoomService             │   │
 │  │                 │   │                                  │   │
-│  │ • getConversation│   │ • createRoom()                  │   │
-│  │ • getRoomMessages│   │ • getRoomsByUser()              │   │
+│  │ • getConversation│  │ • createRoom()                   │   │
+│  │ • getRoomMessages│  │ • getRoomsByUser()               │   │
 │  │ • getRecentChats│   │ • getPublicRooms()               │   │
 │  │ • searchMessages│   │ • joinRoom()                     │   │
 │  │ • markAsRead()  │   │ • leaveRoom()                    │   │
@@ -248,7 +248,7 @@ AppComponent
 │  └─────────────────┘   │ • removeMember()                 │   │
 │                        │ • updateMemberRole()             │   │
 │  ┌─────────────────┐   └──────────────────────────────────┘   │
-│  │  MediaService   │                                           │
+│  │  MediaService   │                                          │
 │  │                 │   ┌──────────────────────────────────┐   │
 │  │ • upload()      │   │      NotificationService         │   │
 │  │ • getByUser()   │   │                                  │   │
@@ -257,15 +257,15 @@ AppComponent
 │  └─────────────────┘   │ • markAllRead()                  │   │
 │                        │ • deleteNotification()           │   │
 │  ┌─────────────────┐   └──────────────────────────────────┘   │
-│  │  UserService    │                                           │
+│  │  UserService    │                                          │
 │  │                 │   ┌──────────────────────────────────┐   │
 │  │ • getProfile()  │   │        AdminService              │   │
 │  │ • updateProfile │   │                                  │   │
-│  │ • searchUsers() │   │ • getAllUsers()                   │   │
+│  │ • searchUsers() │   │ • getAllUsers()                  │   │
 │  │ • getUserById() │   │ • toggleUserStatus()             │   │
 │  │ • getOnlineUsers│   │ • sendBulkNotification()         │   │
 │  └─────────────────┘   └──────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ### Authentication Flow Diagram
@@ -327,10 +327,10 @@ SignalrService
         │  hubConnection.start()
         │
         ▼
-   Connected ──────────────────────────────────────────────────┐
+   Connected ────────────────────────────────────────────────── ┐
         │                                                       │
         │  registerOnEvents()                                   │
-        │  ┌─────────────────────────────────────────────┐     │
+        │  ┌──────────────────────────────────────────── ─┐     │
         │  │ ReceiveMessage    → messageReceived$.next()  │     │
         │  │ MessageSent       → messageSent$.next()      │     │
         │  │ MessageEdited     → messageEdited$.next()    │     │
@@ -342,10 +342,10 @@ SignalrService
         │  │ RoomMessageEdited → roomMessageEdited$       │     │
         │  │ RoomMessageDeleted→ roomMessageDeleted$      │     │
         │  │ NewRoomAdded      → newRoomAdded$.next()     │     │
-        │  └─────────────────────────────────────────────┘     │
+        │  └───────────────────────────────────────────── ┘     │
         │                                                       │
         ▼                                                       │
-ChatWindowComponent                                            │
+ChatWindowComponent                                             │
 RoomListComponent     ──────────────────────────(subscribes)──┘
 HeaderComponent
 SidebarComponent
